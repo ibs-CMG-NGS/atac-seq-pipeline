@@ -1,0 +1,45 @@
+.nextflow*
+work/
+data/
+results/
+.DS_Store
+testing/
+testing*
+*.pyc
+
+# Samplesheet files (ignore copies, but track template)
+samplesheet.csv
+samplesheet_*.csv
+!samplesheet_template.csv
+
+# Params files (track template only)
+params.yaml
+params_*.yaml
+!params_template.yaml
+
+# Reference genome directory (usually large files)
+genome/
+references/
+*.fa
+*.fasta
+*.gtf
+*.gff
+*.bed
+!assets/blacklists/**/*.bed
+
+# Index files
+*.fai
+*.bwt
+*.pac
+*.ann
+*.amb
+*.sa
+
+# Log files
+*.log
+pipeline_info/
+.nextflow.log*
+trace.txt*
+timeline.html*
+report.html*
+dag.dot*

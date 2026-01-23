@@ -1,0 +1,70 @@
+# Input/Output Configuration
+input: './samplesheet.csv'
+outdir: './results'
+
+# Reference Genome
+# Option 1: Use iGenomes (recommended for standard genomes)
+genome: 'GRCh38'  # Options: GRCh37, GRCh38, GRCm38, GRCm39, etc.
+
+# Option 2: Provide custom genome files (uncomment and modify)
+# genome: null
+# fasta: '/path/to/genome/genome.fa'
+# gtf: '/path/to/genome/genes.gtf'
+# bwa_index: '/path/to/genome/bwa_index/'  # Optional: pre-built index
+# blacklist: '/path/to/genome/blacklist.bed'  # Optional: genomic blacklist regions
+
+# Read parameters
+read_length: 150  # Options: 50, 100, 150, 200 (affects MACS2 settings)
+
+# Aligner selection
+aligner: 'bwa'  # Options: bwa (default), bowtie2, star, chromap
+
+# Peak calling options
+narrow_peak: false  # true: narrow peaks (transcription factors), false: broad peaks (histones, ATAC)
+macs_fdr: null      # FDR cutoff for peak calling (default: 0.05)
+macs_pvalue: null   # P-value cutoff (alternative to FDR)
+min_reps_consensus: 1  # Minimum replicates for consensus peaks
+
+# Filtering options
+keep_dups: false        # Keep duplicate reads (default: false, remove duplicates)
+keep_mito: false        # Keep mitochondrial reads (default: false, remove mito)
+keep_multi_map: false   # Keep multi-mapped reads (default: false, remove)
+skip_merge_replicates: false  # Skip merging biological replicates
+
+# Trimming options
+skip_trimming: false
+save_trimmed: false
+min_trimmed_reads: 10000
+
+# Analysis options
+with_control: false     # Use control samples for peak calling
+skip_peak_qc: false
+skip_peak_annotation: false
+skip_consensus_peaks: false
+skip_deseq2_qc: false
+skip_ataqv: false
+skip_igv: false
+
+# QC options
+skip_qc: false
+skip_fastqc: false
+skip_picard_metrics: false
+skip_preseq: true       # Library complexity (computationally intensive)
+skip_plot_profile: false
+skip_plot_fingerprint: false
+skip_multiqc: false
+
+# Resource limits (adjust based on your system)
+max_cpus: 16
+max_memory: '128.GB'
+max_time: '240.h'
+
+# Output options
+publish_dir_mode: 'copy'  # Options: copy, symlink, link
+save_reference: false     # Save generated genome indices
+save_align_intermeds: false  # Save intermediate BAM files
+save_unaligned: false     # Save unmapped reads
+
+# Email notifications (optional)
+# email: 'your.email@example.com'
+# email_on_fail: 'your.email@example.com'

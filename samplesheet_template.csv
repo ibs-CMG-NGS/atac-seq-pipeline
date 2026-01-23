@@ -1,0 +1,30 @@
+sample,fastq_1,fastq_2,replicate
+# Example 1: Paired-end data with biological replicates
+CONTROL,/path/to/data/CONTROL_rep1_R1.fastq.gz,/path/to/data/CONTROL_rep1_R2.fastq.gz,1
+CONTROL,/path/to/data/CONTROL_rep2_R1.fastq.gz,/path/to/data/CONTROL_rep2_R2.fastq.gz,2
+CONTROL,/path/to/data/CONTROL_rep3_R1.fastq.gz,/path/to/data/CONTROL_rep3_R2.fastq.gz,3
+TREATMENT,/path/to/data/TREATMENT_rep1_R1.fastq.gz,/path/to/data/TREATMENT_rep1_R2.fastq.gz,1
+TREATMENT,/path/to/data/TREATMENT_rep2_R1.fastq.gz,/path/to/data/TREATMENT_rep2_R2.fastq.gz,2
+TREATMENT,/path/to/data/TREATMENT_rep3_R1.fastq.gz,/path/to/data/TREATMENT_rep3_R2.fastq.gz,3
+
+# Example 2: Technical replicates (same sample sequenced multiple times)
+# The pipeline will merge these before downstream analysis
+# SAMPLE_A,/path/to/data/SAMPLE_A_L001_R1.fastq.gz,/path/to/data/SAMPLE_A_L001_R2.fastq.gz,1
+# SAMPLE_A,/path/to/data/SAMPLE_A_L002_R1.fastq.gz,/path/to/data/SAMPLE_A_L002_R2.fastq.gz,1
+# SAMPLE_A,/path/to/data/SAMPLE_A_L003_R1.fastq.gz,/path/to/data/SAMPLE_A_L003_R2.fastq.gz,1
+
+# Example 3: Single-end data (leave fastq_2 column empty)
+# SAMPLE_SE,/path/to/data/SAMPLE_SE_R1.fastq.gz,,1
+
+# Example 4: With control samples (requires --with_control flag)
+# Format: sample,fastq_1,fastq_2,replicate,control,control_replicate
+# CONTROL,/path/to/data/CONTROL_rep1_R1.fastq.gz,/path/to/data/CONTROL_rep1_R2.fastq.gz,1,,
+# CONTROL,/path/to/data/CONTROL_rep2_R1.fastq.gz,/path/to/data/CONTROL_rep2_R2.fastq.gz,2,,
+# TREATMENT,/path/to/data/TREATMENT_rep1_R1.fastq.gz,/path/to/data/TREATMENT_rep1_R2.fastq.gz,1,CONTROL,1
+# TREATMENT,/path/to/data/TREATMENT_rep2_R1.fastq.gz,/path/to/data/TREATMENT_rep2_R2.fastq.gz,2,CONTROL,2
+
+# Notes:
+# - Use absolute paths or relative paths from the launch directory
+# - FASTQ files must be gzipped (.fastq.gz or .fq.gz)
+# - Replicate numbers must start from 1
+# - Sample names will be sanitized (spaces converted to underscores)
