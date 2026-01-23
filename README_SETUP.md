@@ -105,25 +105,34 @@ cd /home/ygkim/ngs_pipeline/atac-seq-pipeline
 ./check_setup.sh
 ```
 
-### 2. 템플릿 복사
+### 2. 컨테이너 시스템 확인 ⚠️
+```bash
+# 서버에서 반드시 확인
+apptainer --version  # 또는 docker --version
+
+# 없으면 설치 (관리자 권한 필요)
+sudo apt install -y apptainer
+```
+
+### 3. 템플릿 복사
 ```bash
 cp samplesheet_template.csv samplesheet.csv
 cp params_template.yaml params.yaml
 ```
 
-### 3. 설정 파일 편집
+### 4. 설정 파일 편집
 ```bash
 nano samplesheet.csv  # 샘플 정보 입력
 nano params.yaml      # 분석 파라미터 설정
 ```
 
-### 4. 테스트 실행
+### 5. 테스트 실행
 ```bash
 # WSL Ubuntu에서
 nextflow run nf-core/atacseq -profile test,docker --outdir test_results
 ```
 
-### 5. 실제 분석 실행
+### 6. 실제 분석 실행
 ```bash
 # WSL Ubuntu (테스트)
 nextflow run . -profile docker -params-file params.yaml -resume

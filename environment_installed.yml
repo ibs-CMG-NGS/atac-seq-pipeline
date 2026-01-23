@@ -1,0 +1,26 @@
+name: atac-seq-pipeline
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - deeptools[version='>=3.5.0']
+  - fastqc[version='>=0.12.0']
+  - ipython
+  - git
+  - seaborn[version='>=0.12.0']
+  - curl
+  - samtools[version='>=1.17']
+  - nextflow[version='>=23.04.0']
+  - pandas[version='>=1.5.0']
+  - pigz
+  - wget
+  - multiqc[version='>=1.14']
+  - parallel
+  - python=3.10
+  - matplotlib[version='>=3.5.0']
+  - jupyter
+  - pyyaml[version='>=6.0']
+  - bedtools[version='>=2.30.0']
+  - numpy[version='>=1.23.0']
+prefix: /home/ygkim/program/anaconda3/envs/atac-seq-pipeline

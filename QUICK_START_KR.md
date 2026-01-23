@@ -67,7 +67,42 @@ read_length: 150
 aligner: 'bwa'
 ```
 
-### 3단계: 테스트 실행 (WSL Ubuntu)
+### 3단계: 컨테이너 시스템 확인 ⚠️ 필수
+
+**서버에서 실행 전 반드시 확인:**
+
+```bash
+# Apptainer 확인 (권장)
+apptainer --version
+
+# 또는 Docker 확인
+docker --version
+```
+
+**Apptainer가 설치되지 않은 경우:**
+
+```bash
+# Ubuntu/Debian (관리자 권한 필요)
+sudo apt update
+sudo apt install -y software-properties-common
+sudo add-apt-repository -y ppa:apptainer/ppa
+sudo apt update
+sudo apt install -y apptainer
+
+# 설치 확인
+apptainer --version
+```
+
+**컨테이너 시스템이 없는 경우 (대안):**
+
+```bash
+# Conda 프로파일 사용 (느리지만 작동함)
+nextflow run nf-core/atacseq \
+  -profile conda \
+  -params-file params.yaml
+```
+
+### 4단계: 테스트 실행 (WSL Ubuntu)
 
 ```bash
 # 파이프라인 문법 확인
@@ -86,7 +121,7 @@ nextflow run . \
   -resume
 ```
 
-### 4단계: 프로덕션 실행 (서버)
+### 5단계: 프로덕션 실행 (서버)
 
 ```bash
 # 서버에서 실행

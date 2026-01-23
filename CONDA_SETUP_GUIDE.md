@@ -4,12 +4,13 @@
 
 ## 목차
 1. [Conda 설치 확인](#1-conda-설치-확인)
-2. [Conda 환경 생성](#2-conda-환경-생성)
-3. [Nextflow 설치](#3-nextflow-설치)
-4. [의존성 패키지 설치](#4-의존성-패키지-설치)
-5. [파이프라인 Repository 설정](#5-파이프라인-repository-설정)
-6. [환경 활성화 및 검증](#6-환경-활성화-및-검증)
-7. [환경 관리](#7-환경-관리)
+2. [컨테이너 시스템 설치 (필수)](#2-컨테이너-시스템-설치-필수)
+3. [Conda 환경 생성](#3-conda-환경-생성)
+4. [Nextflow 설치](#4-nextflow-설치)
+5. [의존성 패키지 설치](#5-의존성-패키지-설치)
+6. [파이프라인 Repository 설정](#6-파이프라인-repository-설정)
+7. [환경 활성화 및 검증](#7-환경-활성화-및-검증)
+8. [환경 관리](#8-환경-관리)
 
 ---
 
@@ -58,9 +59,79 @@ conda install -n base -c conda-forge mamba
 
 ---
 
-## 2. Conda 환경 생성
+## 2. 컨테이너 시스템 설치 (필수)
 
-### 2.1 기본 환경 생성
+### ⚠️ 중요: Apptainer/Singularity 또는 Docker 필수
+
+Nextflow 파이프라인은 **컨테이너 시스템**을 사용하여 각 도구를 독립적인 환경에서 실행합니다.
+서버에서 파이프라인을 실행하려면 반드시 다음 중 하나가 설치되어 있어야 합니다.
+
+### 2.1 설치 확인
+
+```bash
+# Apptainer 확인 (권장)
+apptainer --version
+
+# Singularity 확인 (구버전)
+singularity --version
+
+# Docker 확인
+docker --version
+
+# Podman 확인
+podman --version
+```
+
+### 2.2 Apptainer 설치 (권장)
+
+**Ubuntu/Debian 시스템:**
+
+```bash
+# 관리자 권한 필요
+sudo apt update
+sudo apt install -y software-properties-common
+sudo add-apt-repository -y ppa:apptainer/ppa
+sudo apt update
+sudo apt install -y apptainer
+
+# 설치 확인
+apptainer --version
+```
+
+**CentOS/RHEL 시스템:**
+
+```bash
+# EPEL 저장소 활성화
+sudo yum install -y epel-release
+
+# Apptainer 설치
+sudo yum install -y apptainer
+
+# 설치 확인
+apptainer --version
+```
+
+### 2.3 대안: Conda 프로파일 사용
+
+컨테이너 시스템 설치가 불가능한 경우 (관리자 권한이 없는 경우):
+
+```bash
+# -profile conda 사용 (속도 느림, 재현성 낮음)
+nextflow run nf-core/atacseq \
+  -profile conda \
+  -params-file params.yaml
+```
+
+**⚠️ 주의:**
+- Conda 프로파일은 컨테이너보다 느리고 환경 구축에 30분~1시간 소요
+- 재현성이 낮아 권장하지 않음
+- 가능하면 시스템 관리자에게 Apptainer 설치 요청
+
+---
+
+## 3. Conda 환경 생성
+
+### 3.1 기본 환경 생성
 
 ```bash
 # atac-seq-pipeline 환경 생성 (Python 3.10)
@@ -70,7 +141,7 @@ conda create -n atac-seq-pipeline python=3.10 -y
 mamba create -n atac-seq-pipeline python=3.10 -y
 ```
 
-### 2.2 환경 활성화
+### 3.2 환경 활성화
 
 ```bash
 conda activate atac-seq-pipeline
@@ -79,7 +150,7 @@ conda activate atac-seq-pipeline
 # (atac-seq-pipeline) user@host:~$
 ```
 
-### 2.3 Conda 채널 설정
+### 3.3 Conda 채널 설정
 
 ```bash
 # Bioconda 및 필수 채널 추가
@@ -93,9 +164,9 @@ conda config --set channel_priority strict
 
 ---
 
-## 3. Nextflow 설치
+## 4. Nextflow 설치
 
-### 3.1 Nextflow 설치
+### 4.1 Nextflow 설치
 
 **방법 A: Conda로 설치 (권장)**
 
@@ -263,9 +334,9 @@ mamba env create -f environment.yml
 
 ---
 
-## 5. 파이프라인 Repository 설정
+## 6. 파이프라인 Repository 설정
 
-### 5.1 작업 디렉토리 준비
+### 6.1 작업 디렉토리 준비
 
 ```bash
 # 작업 디렉토리 생성
@@ -273,7 +344,7 @@ mkdir -p ~/ngs_pipeline
 cd ~/ngs_pipeline
 ```
 
-### 5.2 Repository Clone
+### 6.2 Repository Clone
 
 **방법 A: GitHub에서 Clone (이미 푸시한 경우)**
 
