@@ -400,7 +400,7 @@ rm -rf results/
 
 ### 6.7 메모리 부족
 
-**증상:**
+**증상 1: Java heap space**
 ```
 OutOfMemoryError: Java heap space
 ```
@@ -409,12 +409,60 @@ OutOfMemoryError: Java heap space
 ```bash
 # Java 메모리 증가
 export NXF_OPTS='-Xms2g -Xmx8g'
+```
 
-# Nextflow config 수정
-# nextflow.config에 추가:
-process {
-    memory = '16.GB'
+**증상 2: Process 메모리 요구량 초과**
+```
+ERROR ~ Error executing process > 'NFCORE_ATACSEQ:ATACSEQ:FASTQ_FASTQC_UMITOOLS_TRIMGALORE:TRIMGALORE'
+Caused by:
+  Process requirement exceeds available memory -- req: 72 GB; avail: 62.8 GB
+```
+
+**원인**: 파이프라인이 요구하는 메모리가 서버 사용 가능 메모리보다 큼
+
+**해결 방법 1: 명령줄에서 최대 메모리 설정 (권장)**
+```bash
+# 서버의 사용 가능한 메모리로 제한
+nextflow run . \
+  -profile singularity \
+  -params-file params.yaml \
+  --max_memory '60.GB' \
+  -resume
+```
+
+**해결 방법 2: params 파일에 추가**
+```bash
+# params.yaml 파일 편집
+nano params.yaml
+
+# 다음 줄 추가:
+# max_memory: '60.GB'
+# max_cpus: 16
+```
+
+**해결 방법 3: 커스텀 config 파일 생성**
+```bash
+# custom.config 생성
+cat > custom.config << 'EOF'
+params {
+    max_memory = 60.GB
+    max_cpus = 16
 }
+
+process {
+    // 특정 프로세스 메모리 제한
+    withName: 'TRIMGALORE' {
+        memory = { check_max( 48.GB * task.attempt, 'memory' ) }
+    }
+}
+EOF
+
+# 커스텀 config로 실행
+nextflow run . \
+  -profile singularity \
+  -params-file params.yaml \
+  -c custom.config \
+  -resume
 ```
 
 ### 6.8 세션 락(Lock) 문제
