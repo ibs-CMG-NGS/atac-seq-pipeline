@@ -10,14 +10,16 @@ genome: 'GRCh38'  # Options: GRCh37, GRCh38, GRCm38, GRCm39, etc.
 # genome: null
 # fasta: '/path/to/genome/genome.fa'
 # gtf: '/path/to/genome/genes.gtf'
-# bwa_index: '/path/to/genome/bwa_index/'  # Optional: pre-built index
-# blacklist: '/path/to/genome/blacklist.bed'  # Optional: genomic blacklist regions
+# bwa_index: '/path/to/genome/bwa_index/'  # Optional: pre-built BWA index
+# bowtie2_index: '/path/to/genome/bowtie2_index/'  # Optional: pre-built Bowtie2 index
+# blacklist: '/path/to/genome/blacklist.bed'  # Optional but recommended: ENCODE blacklist regions
+# mito_name: 'MT'  # Mitochondrial chromosome name (Ensembl: MT, UCSC: chrM, NCBI: M)
 
 # Read parameters
 read_length: 150  # Options: 50, 100, 150, 200 (affects MACS2 settings)
 
 # Aligner selection
-aligner: 'bwa'  # Options: bwa (default), bowtie2, star, chromap
+aligner: 'bwa'  # Options: bwa (default, recommended for ATAC-seq), bowtie2 (faster), star (RNA-seq용, ATAC에 비권장), chromap
 
 # Peak calling options
 narrow_peak: false  # true: narrow peaks (transcription factors), false: broad peaks (histones, ATAC)
@@ -61,7 +63,7 @@ max_time: '240.h'
 
 # Output options
 publish_dir_mode: 'copy'  # Options: copy, symlink, link
-save_reference: false     # Save generated genome indices
+save_reference: true      # Save generated genome indices (권장: 재사용 가능)
 save_align_intermeds: false  # Save intermediate BAM files
 save_unaligned: false     # Save unmapped reads
 
