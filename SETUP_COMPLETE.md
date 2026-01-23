@@ -5,11 +5,15 @@
 ### 1. 파일 생성 및 설정
 - ✅ `samplesheet_template.csv` - 샘플 정보 템플릿
 - ✅ `params_template.yaml` - 파이프라인 파라미터 템플릿
+- ✅ `environment.yml` - Conda 환경 설정 파일
 - ✅ `REFERENCE_GENOME_GUIDE.md` - 참조 유전체 준비 가이드 (영문)
 - ✅ `QUICK_START_KR.md` - 빠른 시작 가이드 (한글)
 - ✅ `README_SETUP.md` - 설정 및 Git 워크플로우 문서
 - ✅ `GITHUB_SETUP.md` - GitHub 저장소 연결 가이드
+- ✅ `CONDA_SETUP_GUIDE.md` - Conda 환경 설정 완벽 가이드
 - ✅ `check_setup.sh` - 자동 설정 검증 스크립트
+- ✅ `activate_pipeline.sh` - Conda 환경 활성화 스크립트
+- ✅ `install_conda_env.sh` - Conda 환경 자동 설치 스크립트
 - ✅ `.gitignore` - 작업 파일 제외 설정
 
 ### 2. Git 저장소 초기화
@@ -65,6 +69,30 @@ ATAC-seq Pipeline Setup Checker
 
 ## 🚀 다음 단계
 
+### 0. Conda 환경 설정 (권장, 우선!)
+
+**Conda를 사용하면 Nextflow와 모든 의존성을 격리된 환경에서 관리할 수 있습니다.**
+
+**빠른 설치:**
+```bash
+# 자동 설치 스크립트 실행
+./install_conda_env.sh
+
+# 설치 후 환경 활성화
+source activate_pipeline.sh
+# 또는
+conda activate atac-seq-pipeline
+```
+
+**상세 가이드:**
+📖 **[CONDA_SETUP_GUIDE.md](CONDA_SETUP_GUIDE.md)** - 완벽한 Conda 환경 설정 가이드
+
+**주요 내용:**
+- Conda 설치 및 환경 생성
+- Nextflow 및 의존성 자동 설치
+- environment.yml을 통한 환경 재현
+- 환경 관리 및 업데이트 방법
+
 ### 1. GitHub에 푸시 (선택사항, 권장)
 
 **방법 A: HTTPS 사용**
@@ -93,11 +121,26 @@ git push -u origin main
 
 ### 2. 서버에서 설정
 
-**서버에 Nextflow 설치:**
+**A. Conda 환경 설정 (권장):**
 ```bash
-# 서버 SSH 접속
+# 서버에 SSH 접속
 ssh your-server
 
+# Repository clone 또는 복사
+cd ~/ngs_pipeline
+git clone https://github.com/YOUR_USERNAME/atac-seq-pipeline.git
+cd atac-seq-pipeline
+
+# Conda 환경 자동 설치
+./install_conda_env.sh
+
+# 또는 수동 설치
+conda env create -f environment.yml
+conda activate atac-seq-pipeline
+```
+
+**B. Nextflow 직접 설치 (Conda 사용 안 하는 경우):**
+```bash
 # Nextflow 설치
 curl -s https://get.nextflow.io | bash
 sudo mv nextflow /usr/local/bin/
@@ -110,19 +153,6 @@ source ~/.bashrc
 
 # 확인
 nextflow -version
-```
-
-**저장소 클론 (GitHub에 푸시한 경우):**
-```bash
-cd /path/to/your/workspace
-git clone https://github.com/YOUR_USERNAME/atac-seq-pipeline.git
-cd atac-seq-pipeline
-```
-
-**또는 직접 복사 (GitHub 사용 안 하는 경우):**
-```bash
-# WSL에서 서버로 복사
-scp -r /home/ygkim/ngs_pipeline/atac-seq-pipeline your-server:/path/to/workspace/
 ```
 
 **서버에서 작업 파일 생성:**

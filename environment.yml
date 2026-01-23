@@ -1,0 +1,50 @@
+name: atac-seq-pipeline
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+
+dependencies:
+  # Core Python
+  - python=3.10
+  
+  # Nextflow - Pipeline orchestration
+  - nextflow>=23.04.0
+  
+  # Essential tools
+  - git
+  - wget
+  - curl
+  
+  # Python data science packages
+  - pandas>=1.5.0
+  - numpy>=1.23.0
+  - matplotlib>=3.5.0
+  - seaborn>=0.12.0
+  - pyyaml>=6.0
+  
+  # Jupyter for interactive analysis
+  - jupyter
+  - ipython
+  
+  # Bioinformatics tools (for local QC and analysis)
+  - samtools>=1.17
+  - bedtools>=2.30.0
+  - deeptools>=3.5.0
+  - fastqc>=0.12.0
+  - multiqc>=1.14
+  
+  # R and Bioconductor (optional, uncomment if needed)
+  # - r-base=4.3
+  # - r-essentials
+  # - r-tidyverse
+  # - bioconductor-deseq2
+  # - bioconductor-chipseeker
+  
+  # Additional utilities
+  - pigz  # Parallel gzip
+  - parallel  # GNU parallel
+  
+  # Optional: for development
+  # - black  # Python code formatter
+  # - pylint  # Python linter
