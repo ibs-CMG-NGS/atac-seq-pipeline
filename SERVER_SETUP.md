@@ -184,7 +184,17 @@ cd atac-seq-pipeline
 conda activate atac-seq-pipeline
 ```
 
-### 4.2 설정 파일 준비
+### 4.2 스크립트 실행 권한 부여 ⚠️ 필수
+
+```bash
+# bin 디렉토리의 모든 스크립트에 실행 권한 부여
+chmod +x bin/*
+
+# 확인
+ls -l bin/ | head
+```
+
+### 4.3 설정 파일 준비
 
 ```bash
 # 템플릿 복사
@@ -196,7 +206,7 @@ nano samplesheet.csv
 nano params.yaml
 ```
 
-### 4.3 환경 변수 설정
+### 4.4 환경 변수 설정
 
 ```bash
 # ~/.bashrc에 추가
@@ -309,6 +319,7 @@ mkdir -p $APPTAINER_TMPDIR
 **증상:**
 ```
 WARNING: NXF_SINGULARITY_CACHEDIR is not defined
+WARN: Singularity cache directory has not been defined -- Remote image will be stored in the path: /home/ngs/ngs-pipeline/atac-seq-pipeline/work/singularity
 ```
 
 **해결 방법:**
@@ -317,11 +328,37 @@ WARNING: NXF_SINGULARITY_CACHEDIR is not defined
 export NXF_SINGULARITY_CACHEDIR="$HOME/.singularity/cache"
 mkdir -p $NXF_SINGULARITY_CACHEDIR
 
-# ~/.bashrc에 영구 저장
+# ~/.bashrc에 영구 저장 (권장)
 echo 'export NXF_SINGULARITY_CACHEDIR="$HOME/.singularity/cache"' >> ~/.bashrc
+source ~/.bashrc
 ```
 
-### 6.4 관리자 권한이 없는 경우
+### 6.4 "Permission denied" - 스크립트 실행 권한 문제
+
+**증상:**
+```
+.command.sh: line 3: /home/ngs/ngs-pipeline/atac-seq-pipeline/bin/gtf2bed: Permission denied
+ERROR ~ Error executing process > 'NFCORE_ATACSEQ:ATACSEQ:PREPARE_GENOME:GTF2BED'
+```
+
+**원인**: `bin/` 디렉토리의 스크립트 파일에 실행 권한이 없음
+
+**해결 방법:**
+```bash
+# bin 디렉토리의 모든 스크립트에 실행 권한 부여
+chmod +x bin/gtf2bed
+chmod +x bin/*.py
+chmod +x bin/*.r
+chmod +x bin/*.sh
+
+# 또는 한번에
+chmod +x bin/*
+
+# 파이프라인 재개
+nextflow run . -profile singularity -params-file params.yaml -resume
+```
+
+### 6.5 관리자 권한이 없는 경우
 
 **문제**: Apptainer/Docker를 설치할 수 없음
 
@@ -337,7 +374,7 @@ nextflow run . -profile conda -params-file params.yaml
 nextflow run . -profile docker -params-file params.yaml
 ```
 
-### 6.5 디스크 공간 부족
+### 6.6 디스크 공간 부족
 
 **증상:**
 ```
@@ -361,7 +398,7 @@ tar -czf old_results.tar.gz results/
 rm -rf results/
 ```
 
-### 6.6 메모리 부족
+### 6.7 메모리 부족
 
 **증상:**
 ```
@@ -378,6 +415,31 @@ export NXF_OPTS='-Xms2g -Xmx8g'
 process {
     memory = '16.GB'
 }
+```
+
+### 6.8 세션 락(Lock) 문제
+
+**증상:**
+```
+ERROR ~ Unable to acquire lock on session with ID xxxxx
+```
+
+**원인**: 이전 실행이 비정상 종료되어 락 파일이 남아있음
+
+**해결 방법:**
+```bash
+# 방법 1: 전체 Nextflow 캐시 삭제 (권장)
+rm -rf .nextflow/
+rm -rf .nextflow.log*
+
+# 방법 2: 특정 세션만 삭제
+# rm -rf .nextflow/cache/<SESSION_ID>
+
+# 방법 3: 락 파일만 삭제
+# rm -f .nextflow/cache/<SESSION_ID>/db/LOCK
+
+# 다시 실행
+nextflow run . -profile singularity -params-file params.yaml
 ```
 
 ---
