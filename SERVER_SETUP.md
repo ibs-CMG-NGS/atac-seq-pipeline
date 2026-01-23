@@ -442,6 +442,58 @@ rm -rf .nextflow.log*
 nextflow run . -profile singularity -params-file params.yaml
 ```
 
+### 6.9 Singularity 이미지 다운로드 타임아웃
+
+**증상:**
+```
+ERROR ~ Error executing process > 'NFCORE_ATACSEQ:ATACSEQ:FASTQ_FASTQC_UMITOOLS_TRIMGALORE:TRIMGALORE'
+Caused by:
+  Failed to pull singularity image
+    status : 143
+    hint   : Try and increase singularity.pullTimeout in the config (current is "20m")
+```
+
+**원인**: 네트워크 속도가 느려 20분 내에 이미지 다운로드 실패
+
+**해결 방법 1: Timeout 증가 (권장)**
+```bash
+# nextflow.config 파일 편집
+nano nextflow.config
+
+# 파일 끝에 추가:
+# singularity {
+#     pullTimeout = '60m'
+# }
+
+# 또는 환경 변수로 설정
+export NXF_SINGULARITY_PULL_TIMEOUT='60m'
+
+# 파이프라인 재실행
+nextflow run . -profile singularity -params-file params.yaml -resume
+```
+
+**해결 방법 2: 이미지 미리 다운로드**
+```bash
+# 캐시 디렉토리로 이동
+cd ~/.singularity/cache
+
+# 필요한 이미지 수동 다운로드
+apptainer pull docker://quay.io/biocontainers/trim-galore:0.6.7--hdfd78af_0
+
+# 다운로드 완료 후 파이프라인 재실행
+cd ~/ngs-pipeline/atac-seq-pipeline
+nextflow run . -profile singularity -params-file params.yaml -resume
+```
+
+**해결 방법 3: 명령줄에서 직접 설정**
+```bash
+nextflow run . \
+  -profile singularity \
+  -params-file params.yaml \
+  -resume \
+  -c <(echo "singularity.pullTimeout = '60m'")
+```
+
 ---
 
 ## 📚 추가 참고자료
