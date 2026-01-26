@@ -1,8 +1,14 @@
-# ATAC-seq Automatic QC Summary
+# ATAC-seq Quality Control Reports
 
-This pipeline automatically analyzes FastQC results for ATAC-seq specific quality metrics and generates a comprehensive summary report.
+This pipeline provides **two complementary QC reports** for comprehensive quality assessment:
 
-## Features
+## 1. FastQC-based QC Summary (Early QC)
+
+**Purpose**: Quick quality check after read trimming  
+**Tool**: `atac_qc_checker.py`  
+**When**: Runs immediately after FastQC/TrimGalore
+
+### Features
 
 - **ATAC-seq Specific Criteria**: Understands normal ATAC-seq characteristics (Tn5 bias, high duplication)
 - **Automatic Flagging**: Identifies samples that require manual review
@@ -159,6 +165,94 @@ A: Yes! Use the standalone mode:
 ```bash
 atac_qc_checker.py /path/to/old/fastqc qc_summary.json
 ```
+
+## Citation
+
+If you use these QC tools, please cite the nf-core/atacseq pipeline:
+
+> Ewels PA, Peltzer A, Fillinger S, Patel H, Alneberg J, Wilm A, Garcia MU, Di Tommaso P, Nahnsen S. The nf-core framework for community-curated bioinformatics pipelines. Nat Biotechnol. 2020 Mar;38(3):276-278. doi: 10.1038/s41587-020-0439-x. PubMed PMID: 32055031.
+
+---
+
+## 2. Comprehensive Pipeline Report (Full QC)
+
+**Purpose**: Complete pipeline quality assessment  
+**Tool**: `atac_pipeline_report.py`  
+**When**: Runs at the end of the pipeline
+
+### Features
+
+- **Complete Pipeline Coverage**: TrimGalore → BWA → Peak Calling → QC metrics
+- **RNA-seq Style Format**: Familiar, professional layout
+- **Key ATAC-seq Metrics**:
+  - Adapter trimming statistics
+  - Alignment quality (mapping rate, properly paired reads)
+  - Duplicate rates (Picard MarkDuplicates)
+  - Peak calling results (number of peaks, peak lengths)
+  - **FRiP Score** (Fraction of Reads in Peaks) - Critical ATAC-seq metric
+  - Fragment size distribution (nucleosome pattern)
+  - File sizes
+
+### Output Files
+
+```
+results/
+  pipeline_qc/
+    └── pipeline_qc_report.html    # 📊 Comprehensive HTML report
+```
+
+### ATAC-seq Specific Metrics
+
+#### FRiP Score (Fraction of Reads in Peaks)
+- **Good**: >20%
+- **Acceptable**: 10-20%
+- **Poor**: <10%
+
+Higher FRiP scores indicate better signal-to-noise ratio and successful ATAC-seq experiment.
+
+#### Fragment Size Distribution
+- **Nucleosome-Free Regions (NFR)**: ~50bp peak
+- **Mono-nucleosome**: ~200bp peak
+- **Di-nucleosome**: ~400bp peak
+
+Expected pattern: Bimodal distribution showing clear nucleosome positioning.
+
+### Usage
+
+The comprehensive report is automatically generated at the end of the pipeline:
+
+```bash
+# After pipeline completion
+open results/pipeline_qc/pipeline_qc_report.html
+```
+
+Or generate manually:
+
+```bash
+atac_pipeline_report.py results pipeline_qc_report.html
+```
+
+---
+
+## Comparison: FastQC QC vs Pipeline QC
+
+| Feature | FastQC QC | Pipeline QC |
+|---------|-----------|-------------|
+| **Timing** | After trimming | End of pipeline |
+| **Focus** | Read quality | Full pipeline metrics |
+| **Primary Use** | Early problem detection | Final quality assessment |
+| **Key Metrics** | Base quality, adapters | FRiP, peaks, fragments |
+| **Decision Point** | Stop/Continue pipeline | Accept/Reject results |
+
+### Recommended Workflow
+
+1. **Run pipeline** with both QC tools enabled
+2. **Check FastQC QC** (`qc_summary.html`) - Review flagged samples early
+3. **Wait for completion**
+4. **Check Pipeline QC** (`pipeline_qc_report.html`) - Final quality assessment
+5. **Make decisions** based on FRiP scores and peak metrics
+
+---
 
 ## Citation
 
