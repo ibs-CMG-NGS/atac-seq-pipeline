@@ -99,6 +99,11 @@ include { PICARD_MERGESAMFILES as PICARD_MERGESAMFILES_LIBRARY   } from '../modu
 include { PICARD_MERGESAMFILES as PICARD_MERGESAMFILES_REPLICATE } from '../modules/nf-core/picard/mergesamfiles/main'
 
 //
+// MODULE: Local modules
+//
+include { ATAC_QC_SUMMARY } from '../modules/local/atac_qc_summary'
+
+//
 // SUBWORKFLOW: Consisting entirely of nf-core/modules
 //
 include { FASTQ_FASTQC_UMITOOLS_TRIMGALORE } from '../subworkflows/nf-core/fastq_fastqc_umitools_trimgalore/main'
@@ -156,6 +161,16 @@ workflow ATACSEQ {
         params.min_trimmed_reads
     )
     ch_versions = ch_versions.mix(FASTQ_FASTQC_UMITOOLS_TRIMGALORE.out.versions)
+
+    //
+    // MODULE: ATAC-seq specific QC summary
+    //
+    if (!params.skip_qc && !params.skip_fastqc) {
+        ATAC_QC_SUMMARY (
+            FASTQ_FASTQC_UMITOOLS_TRIMGALORE.out.fastqc_zip.collect{it[1]}.ifEmpty([])
+        )
+        ch_versions = ch_versions.mix(ATAC_QC_SUMMARY.out.versions)
+    }
 
     //
     // SUBWORKFLOW: Alignment with BWA & BAM QC
