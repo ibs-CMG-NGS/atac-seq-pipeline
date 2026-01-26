@@ -101,7 +101,8 @@ include { PICARD_MERGESAMFILES as PICARD_MERGESAMFILES_REPLICATE } from '../modu
 //
 // MODULE: Local modules
 //
-include { ATAC_QC_SUMMARY } from '../modules/local/atac_qc_summary'
+include { ATAC_QC_SUMMARY     } from '../modules/local/atac_qc_summary'
+include { ATAC_PIPELINE_REPORT } from '../modules/local/atac_pipeline_report'
 
 //
 // SUBWORKFLOW: Consisting entirely of nf-core/modules
@@ -770,6 +771,13 @@ workflow ATACSEQ {
         )
         multiqc_report = MULTIQC.out.report.toList()
     }
+
+    //
+    // MODULE: Generate comprehensive pipeline QC report
+    //
+    ATAC_PIPELINE_REPORT (
+        params.outdir
+    )
 }
 
 /*
