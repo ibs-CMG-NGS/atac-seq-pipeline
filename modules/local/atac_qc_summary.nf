@@ -36,6 +36,7 @@ process ATAC_QC_SUMMARY {
     # Create list of samples needing review
     python3 <<'PYTHON_SCRIPT'
 import json
+from datetime import datetime
 
 with open('qc_summary.json', 'r') as f:
     data = json.load(f)
@@ -43,7 +44,7 @@ with open('qc_summary.json', 'r') as f:
 if data['requires_review']:
     with open('samples_need_review.txt', 'w') as f:
         f.write("# ATAC-seq samples requiring manual QC review\\n")
-        f.write("# Generated: $(date)\\n")
+        f.write("# Generated: {}\\n".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         f.write("# Total samples: {}\\n".format(data['total_samples']))
         f.write("# Failed samples: {}\\n\\n".format(data['failed']))
         
