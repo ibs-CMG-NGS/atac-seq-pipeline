@@ -3,7 +3,7 @@ process ATAC_PIPELINE_REPORT {
     label 'process_single'
 
     conda "conda-forge::python=3.9"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+    container "${ workflow.containerEngine == 'singularity' ?
         'https://depot.galaxyproject.org/singularity/python:3.9--1' :
         'biocontainers/python:3.9--1' }"
 
@@ -13,9 +13,6 @@ process ATAC_PIPELINE_REPORT {
     output:
     path "pipeline_qc_report.html", emit: html
     path "versions.yml"           , emit: versions
-
-    when:
-    task.ext.when == null || task.ext.when
 
     script:
     """
