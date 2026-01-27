@@ -773,11 +773,12 @@ workflow ATACSEQ {
     }
 
     //
-    // MODULE: Generate comprehensive pipeline QC report
+    // NOTE: Pipeline QC report disabled for now - run manually after pipeline completion
+    // Run: atac_pipeline_report.py ./results pipeline_qc_report.html
     //
-    ATAC_PIPELINE_REPORT (
-        params.outdir
-    )
+    // ATAC_PIPELINE_REPORT (
+    //     file(params.outdir)
+    // )
 }
 
 /*
