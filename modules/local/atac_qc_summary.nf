@@ -34,7 +34,7 @@ process ATAC_QC_SUMMARY {
     generate_qc_html.py qc_summary.json qc_summary.html
 
     # Create list of samples needing review
-    python3 <<'PYTHON_SCRIPT'
+    cat > create_review_list.py <<'EOF'
 import json
 from datetime import datetime
 
@@ -57,7 +57,9 @@ if data['requires_review']:
                 for warning in result['warnings']:
                     f.write("  - WARNING: {}\\n".format(warning))
             f.write("\\n")
-PYTHON_SCRIPT
+EOF
+
+    python create_review_list.py
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
