@@ -147,10 +147,10 @@ def reorganize_sample_outputs(nf_results, standard_base, sample_id, condition,
     intermediate = sample_dir / 'intermediate'
     
     # Determine nf-core sample pattern
-    # nf-core uses format: {condition}_REP{replicate} or just {condition}
-    nf_sample = f"{condition}"
+    # nf-core uses format: {condition}_REP{replicate}
+    nf_sample = f"{condition}_REP{replicate}"
     
-    print(f"\n  📦 Processing: {sample_id}")
+    print(f"\n  📦 Processing: {sample_id} (nf-core name: {nf_sample})")
     files_copied = 0
     files_failed = 0
     
@@ -158,8 +158,8 @@ def reorganize_sample_outputs(nf_results, standard_base, sample_id, condition,
     
     # BAM files (merged library)
     bam_patterns = [
-        nf_res / 'bwa' / 'mergedLibrary' / f'{nf_sample}.mLb.clN.sorted.bam',
-        nf_res / 'bwa' / 'mergedLibrary' / f'{nf_sample}.sorted.bam'
+        nf_res / 'bwa' / 'merged_library' / f'{nf_sample}.mLb.clN.sorted.bam',
+        nf_res / 'bwa' / 'merged_library' / f'{nf_sample}.sorted.bam'
     ]
     
     for bam_src in bam_patterns:
@@ -178,11 +178,14 @@ def reorganize_sample_outputs(nf_results, standard_base, sample_id, condition,
             break
     
     # Peak files
-    peak_dir = nf_res / 'bwa' / 'mergedLibrary' / 'macs2' / peak_type
+    peak_dir = nf_res / 'bwa' / 'merged_library' / 'macs2' / 'broad_peak'
+    if peak_type == 'narrowPeak':
+        peak_dir = nf_res / 'bwa' / 'merged_library' / 'macs2' / 'narrow_peak'
+    
     if peak_dir.exists():
         # Broad peaks
         if peak_type == 'broadPeak':
-            peak_src = peak_dir / f'{nf_sample}_peaks.broadPeak'
+            peak_src = peak_dir / f'{nf_sample}.mLb.clN_peaks.broadPeak'
             if peak_src.exists():
                 peak_dst = final_out / 'peaks' / 'broad_peaks.bed'
                 if copy_or_link(peak_src, peak_dst, use_symlink):
@@ -191,7 +194,7 @@ def reorganize_sample_outputs(nf_results, standard_base, sample_id, condition,
         
         # Narrow peaks
         elif peak_type == 'narrowPeak':
-            peak_src = peak_dir / f'{nf_sample}_peaks.narrowPeak'
+            peak_src = peak_dir / f'{nf_sample}.mLb.clN_peaks.narrowPeak'
             if peak_src.exists():
                 peak_dst = final_out / 'peaks' / 'narrow_peaks.bed'
                 if copy_or_link(peak_src, peak_dst, use_symlink):
@@ -199,9 +202,10 @@ def reorganize_sample_outputs(nf_results, standard_base, sample_id, condition,
                     print(f"     ✅ Peaks: {peak_src.name}")
     
     # BigWig files
-    bw_dir = nf_res / 'bwa' / 'mergedLibrary' / 'bigwig'
+    bw_dir = nf_res / 'bwa' / 'merged_library' / 'bigwig'
     if bw_dir.exists():
         bw_patterns = [
+            bw_dir / f'{nf_sample}.mLb.clN.bigWig',
             bw_dir / f'{nf_sample}.bigWig',
             bw_dir / f'{nf_sample}.bw'
         ]
