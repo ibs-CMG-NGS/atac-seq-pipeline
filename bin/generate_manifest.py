@@ -30,8 +30,8 @@ def extract_qc_metrics(multiqc_data_dir, sample_id, condition):
     
     Args:
         multiqc_data_dir: Path to multiqc_data directory
-        sample_id: Sample ID (e.g., CONTROL_REP1)
-        condition: Condition name (e.g., CONTROL)
+        sample_id: Sample ID (e.g., H2O2_100uM_REP1)
+        condition: nf-core sample name for MultiQC lookup (e.g., 100uM_REP1)
         
     Returns:
         dict: QC metrics
@@ -43,31 +43,34 @@ def extract_qc_metrics(multiqc_data_dir, sample_id, condition):
         print(f"⚠️  Warning: MultiQC data directory not found: {multiqc_dir}")
         return metrics
     
+    # Use condition if provided, otherwise fall back to sample_id
+    lookup_name = condition if condition else sample_id
+    
     try:
-        # FRiP score - use sample_id (e.g., CONTROL_REP1)
+        # FRiP score - use lookup_name (e.g., 100uM_REP1)
         frip_file = multiqc_dir / 'multiqc_mlib_frip_score-plot.txt'
         if frip_file.exists():
             df_frip = pd.read_csv(frip_file, sep='\t', index_col=0)
-            if sample_id in df_frip.index and sample_id in df_frip.columns:
-                metrics['frip_score'] = float(df_frip.loc[sample_id, sample_id])
+            if lookup_name in df_frip.index and lookup_name in df_frip.columns:
+                metrics['frip_score'] = float(df_frip.loc[lookup_name, lookup_name])
         
-        # Peak count - use sample_id with .mLb.clN_peaks suffix
+        # Peak count - use lookup_name
         peak_file = multiqc_dir / 'multiqc_mlib_peak_count-plot.txt'
         if peak_file.exists():
             df_peak = pd.read_csv(peak_file, sep='\t', index_col=0)
             # Peak count file has sample name in index
-            if sample_id in df_peak.index:
+            if lookup_name in df_peak.index:
                 # Get the peak count value (first non-NaN value in the row)
-                peak_values = df_peak.loc[sample_id]
+                peak_values = df_peak.loc[lookup_name]
                 peak_count = peak_values.dropna().values[0] if len(peak_values.dropna()) > 0 else 0
                 metrics['peak_count'] = int(peak_count)
         
-        # Alignment metrics from Picard - use sample_id
+        # Alignment metrics from Picard - use lookup_name
         picard_file = multiqc_dir / 'multiqc_picard_AlignmentSummaryMetrics.txt'
         if picard_file.exists():
             df_picard = pd.read_csv(picard_file, sep='\t')
-            # Find row matching sample_id
-            sample_rows = df_picard[df_picard['Sample'] == sample_id]
+            # Find row matching lookup_name
+            sample_rows = df_picard[df_picard['Sample'] == lookup_name]
             if not sample_rows.empty:
                 row = sample_rows.iloc[0]
                 metrics['total_reads'] = int(row['TOTAL_READS']) if 'TOTAL_READS' in row else 0
@@ -75,11 +78,11 @@ def extract_qc_metrics(multiqc_data_dir, sample_id, condition):
                 metrics['alignment_rate'] = float(row['PCT_PF_READS_ALIGNED']) if 'PCT_PF_READS_ALIGNED' in row else 0.0
                 metrics['duplicate_rate'] = float(row.get('PERCENT_DUPLICATION', 0.0))
         
-        # Duplication metrics - use sample_id
+        # Duplication metrics - use lookup_name
         dup_file = multiqc_dir / 'multiqc_picard_dups.txt'
         if dup_file.exists():
             df_dup = pd.read_csv(dup_file, sep='\t')
-            sample_rows = df_dup[df_dup['Sample'] == sample_id]
+            sample_rows = df_dup[df_dup['Sample'] == lookup_name]
             if not sample_rows.empty:
                 row = sample_rows.iloc[0]
                 metrics['duplicate_rate'] = float(row['PERCENT_DUPLICATION']) if 'PERCENT_DUPLICATION' in row else 0.0
