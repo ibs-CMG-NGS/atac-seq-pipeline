@@ -294,8 +294,7 @@ Examples:
     )
     parser.add_argument(
         '--output',
-        default='manifest.json',
-        help='Output manifest.json file (default: manifest.json)'
+        help='Output manifest.json file (default: auto-detect from final-outputs-dir)'
     )
     parser.add_argument(
         '--pipeline-version',
@@ -329,6 +328,16 @@ Examples:
     if not Path(args.final_outputs_dir).exists():
         print(f"❌ Error: final_outputs directory not found: {args.final_outputs_dir}")
         sys.exit(1)
+    
+    # Auto-detect output path if not specified
+    if args.output is None:
+        # Assume structure: .../sample_id/atac-seq/final_outputs
+        # Place manifest in: .../sample_id/atac-seq/metadata/manifest.json
+        final_outputs_path = Path(args.final_outputs_dir).resolve()
+        # Go up two levels: final_outputs -> atac-seq -> sample_dir
+        metadata_dir = final_outputs_path.parent / 'metadata'
+        metadata_dir.mkdir(parents=True, exist_ok=True)
+        args.output = str(metadata_dir / 'manifest.json')
     
     # Generate manifest
     try:
