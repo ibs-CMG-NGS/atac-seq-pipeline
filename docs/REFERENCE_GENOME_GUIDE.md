@@ -3,10 +3,50 @@
 이 문서는 nf-core/atacseq 파이프라인에서 사용할 참조 유전체를 준비하는 방법을 설명합니다.
 
 ## 목차
-1. [iGenomes 사용하기 (권장)](#1-igenomes-사용하기-권장)
-2. [커스텀 참조 유전체 준비하기](#2-커스텀-참조-유전체-준비하기)
-3. [필수 파일 목록](#3-필수-파일-목록)
-4. [참조 유전체 다운로드 예시](#4-참조-유전체-다운로드-예시)
+1. [Human vs Mouse 빠른 비교](#0-human-vs-mouse-빠른-비교)
+2. [iGenomes 사용하기 (권장)](#1-igenomes-사용하기-권장)
+3. [커스텀 참조 유전체 준비하기](#2-커스텀-참조-유전체-준비하기)
+4. [필수 파일 목록](#3-필수-파일-목록)
+5. [참조 유전체 다운로드 예시](#4-참조-유전체-다운로드-예시)
+
+---
+
+## 0. Human vs Mouse 빠른 비교
+
+species를 전환할 때 반드시 변경해야 하는 파라미터 목록입니다.
+
+### iGenomes 사용 시 (권장)
+
+| 파라미터 | Human | Mouse |
+|---|---|---|
+| `genome` | `'GRCh38'` (hg38) 또는 `'GRCh37'` (hg19) | `'GRCm39'` (mm39) 또는 `'GRCm38'` (mm10) |
+| `macs_gsize` | 설정 불필요 (iGenomes가 자동 적용) | 설정 불필요 (iGenomes가 자동 적용) |
+
+```yaml
+# Human
+genome: 'GRCh38'
+read_length: 150
+
+# Mouse
+genome: 'GRCm39'
+read_length: 150   # 또는 75 (시퀀싱 프로토콜에 따라)
+```
+
+### 커스텀 유전체 사용 시
+
+| 파라미터 | Human (Ensembl hg38) | Mouse (Ensembl mm39) |
+|---|---|---|
+| `fasta` | `Homo_sapiens.GRCh38.dna.primary_assembly.fa` | `Mus_musculus.GRCm39.dna.primary_assembly.fa` |
+| `gtf` | `Homo_sapiens.GRCh38.*.gtf` | `Mus_musculus.GRCm39.*.gtf` |
+| `blacklist` | `hg38-blacklist.v2.bed` | `mm10-blacklist.v2.bed` ⚠️ |
+| `mito_name` | `'MT'` (Ensembl) / `'chrM'` (UCSC) | `'MT'` (Ensembl) / `'chrM'` (UCSC) |
+| `macs_gsize` | `'2.7e9'` 또는 `'hs'` | `'1.87e9'` 또는 `'mm'` |
+
+> ⚠️ **Mouse blacklist 주의:** GRCm39(mm39)에 대한 공식 blacklist는 아직 없습니다. mm10 blacklist(`mm10-blacklist.v2.bed`)를 mm39에도 적용하는 것이 현재 표준 관행입니다. 염색체 좌표 차이가 일부 있으나 실용적으로 문제없이 사용됩니다.
+
+> **`mito_name` 규칙:** source(Ensembl vs UCSC)에 따라 달라지며 species에 따라 달라지지 않습니다.
+> - Ensembl 다운로드: 항상 `MT` (human, mouse 동일)
+> - UCSC 다운로드: 항상 `chrM` (human, mouse 동일)
 
 ---
 

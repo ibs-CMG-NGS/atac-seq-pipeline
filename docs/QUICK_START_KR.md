@@ -218,8 +218,9 @@ Treated,/data/treat_rep2.fq.gz,,2
 input: './samplesheet.csv'
 outdir: './results_mouse_atac'
 genome: 'GRCm39'
-read_length: 75
+read_length: 75        # mouse 프로토콜에 따라 75 또는 150
 aligner: 'bwa'
+# macs_gsize: '1.87e9'  # 커스텀 유전체 사용 시 필요, iGenomes 사용 시 생략
 ```
 
 ### 시나리오 3: Control 샘플 포함 (peak calling)

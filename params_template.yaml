@@ -18,6 +18,12 @@ genome: 'GRCh38'  # Options: GRCh37, GRCh38, GRCm38, GRCm39, etc.
 # Read parameters
 read_length: 150  # Options: 50, 100, 150, 200 (affects MACS2 settings)
 
+# MACS2 effective genome size (custom genome 사용 시 반드시 설정)
+# iGenomes 사용 시 자동 적용되므로 생략 가능
+# Human (hg38/hg19): '2.7e9' 또는 'hs'
+# Mouse (mm39/mm10): '1.87e9' 또는 'mm'
+# macs_gsize: '2.7e9'
+
 # Aligner selection
 aligner: 'bwa'  # Options: bwa (default, recommended for ATAC-seq), bowtie2 (faster), star (RNA-seq용, ATAC에 비권장), chromap
 
