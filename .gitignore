@@ -1,6 +1,8 @@
 .nextflow*
 work/
 data/
+# Windows NTFS alternate data stream artifacts (from downloads via Windows)
+*:Zone.Identifier
 results/
 .DS_Store
 testing/

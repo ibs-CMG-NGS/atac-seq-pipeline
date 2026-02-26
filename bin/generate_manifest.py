@@ -201,9 +201,9 @@ def generate_manifest(args):
     manifest = {
         'sample_id': args.sample_id,
         'project_id': args.project_id,
-        'pipeline': 'atac-seq',
+        'pipeline_type': 'atac-seq',
         'pipeline_version': args.pipeline_version,
-        'completion_date': datetime.now().isoformat(),
+        'execution_date': datetime.now().isoformat(),
         'genome_build': args.genome_build,
         'aligner': args.aligner,
         'peak_caller': args.peak_caller
@@ -228,23 +228,28 @@ def generate_manifest(args):
         manifest['qc_metrics'] = {}
     
     # Determine status
-    manifest['analysis_status'] = 'complete'
+    manifest['status'] = 'completed'
     manifest['warnings'] = []
     manifest['errors'] = []
-    
+
     # Basic QC checks
     if 'qc_metrics' in manifest:
         qc = manifest['qc_metrics']
-        
+
         if qc.get('frip_score', 0) < 0.3:
             manifest['warnings'].append(f"Low FRiP score: {qc.get('frip_score', 0):.3f} < 0.3")
-        
+
         if qc.get('peak_count', 0) < 1000:
             manifest['warnings'].append(f"Low peak count: {qc.get('peak_count', 0)} < 1000")
-        
+
         if qc.get('alignment_rate', 0) < 0.7:
             manifest['warnings'].append(f"Low alignment rate: {qc.get('alignment_rate', 0):.1%} < 70%")
-    
+
+        # Set QC status field for agent readability
+        manifest['qc_metrics']['status'] = 'WARN' if manifest['warnings'] else 'PASS'
+
+    manifest['next_steps'] = []
+
     return manifest
 
 
@@ -360,7 +365,7 @@ Examples:
         print(f"\n📊 Manifest Summary:")
         print(f"   Sample ID: {manifest['sample_id']}")
         print(f"   Project ID: {manifest['project_id']}")
-        print(f"   Status: {manifest['analysis_status']}")
+        print(f"   Status: {manifest['status']}")
         
         if 'qc_metrics' in manifest and manifest['qc_metrics']:
             print(f"\n   QC Metrics:")

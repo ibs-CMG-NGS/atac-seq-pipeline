@@ -103,20 +103,60 @@ class ATACseqQCChecker:
         
         return data
     
+    def _build_sequencing_metrics(self):
+        """Build standard sequencing section from FastQC basic statistics"""
+        stats = self.data['basic_statistics']
+        metrics = {}
+
+        if 'Total Sequences' in stats:
+            metrics['total_reads'] = int(stats['Total Sequences'])
+
+        if 'Sequence length' in stats:
+            seq_len = stats['Sequence length']
+            if '-' in seq_len:
+                metrics['read_length'] = int(seq_len.split('-')[1])
+            else:
+                metrics['read_length'] = int(seq_len)
+
+        if '%GC' in stats:
+            metrics['gc_content'] = int(stats['%GC'])
+
+        return metrics
+
     def check_quality(self):
-        """Run all QC checks"""
+        """Run all QC checks and return STANDARDIZATION §4 qc_summary format"""
         self._check_basic_stats()
         self._check_per_base_quality()
         self._check_module_failures()
         self._check_adapter_content()
-        
+
+        has_errors = len(self.issues) > 0
+        has_warnings = len(self.warnings) > 0
+
+        # Build standard issues list (errors + warnings combined)
+        standard_issues = []
+        for issue in self.issues:
+            standard_issues.append({'severity': 'error', 'category': 'fastqc', 'message': issue})
+        for warning in self.warnings:
+            standard_issues.append({'severity': 'warning', 'category': 'fastqc', 'message': warning})
+
+        if has_errors:
+            overall_status = 'FAIL'
+        elif has_warnings:
+            overall_status = 'WARN'
+        else:
+            overall_status = 'PASS'
+
         return {
-            'sample': self.sample_name,
-            'status': 'PASS' if len(self.issues) == 0 else 'FAIL',
-            'issues': self.issues,
-            'warnings': self.warnings,
-            'requires_review': len(self.issues) > 0,
-            'basic_stats': self.data['basic_statistics']
+            'sample_id': self.sample_name,
+            'pipeline_type': 'atac-seq',
+            'qc_version': '1.0',
+            'overall_status': overall_status,
+            'sequencing': self._build_sequencing_metrics(),
+            'alignment': {},        # populated from MultiQC/Picard data by generate_manifest.py
+            'pipeline_specific': {},  # populated from MultiQC peak data by generate_manifest.py
+            'issues': standard_issues,
+            'recommendations': []
         }
     
     def _check_basic_stats(self):
@@ -241,8 +281,8 @@ def analyze_all_samples(fastqc_dir, output_json, verbose=False):
             results.append(result)
             
             if verbose:
-                status_icon = "✅" if result['status'] == 'PASS' else "❌"
-                print(f"{status_icon} {result['sample']}: {result['status']}")
+                status_icon = "✅" if result['overall_status'] == 'PASS' else ("⚠️" if result['overall_status'] == 'WARN' else "❌")
+                print(f"{status_icon} {result['sample_id']}: {result['overall_status']}")
                 
         except Exception as e:
             print(f"Error processing {data_file}: {e}", file=sys.stderr)
@@ -250,9 +290,10 @@ def analyze_all_samples(fastqc_dir, output_json, verbose=False):
     # Generate summary
     summary = {
         'total_samples': len(results),
-        'passed': sum(1 for r in results if r['status'] == 'PASS'),
-        'failed': sum(1 for r in results if r['status'] == 'FAIL'),
-        'requires_review': [r for r in results if r['requires_review']],
+        'passed': sum(1 for r in results if r['overall_status'] == 'PASS'),
+        'warned': sum(1 for r in results if r['overall_status'] == 'WARN'),
+        'failed': sum(1 for r in results if r['overall_status'] == 'FAIL'),
+        'requires_review': [r for r in results if r['overall_status'] != 'PASS'],
         'all_results': results
     }
     
@@ -266,26 +307,31 @@ def analyze_all_samples(fastqc_dir, output_json, verbose=False):
     print(f"{'='*70}")
     print(f"Total samples analyzed: {summary['total_samples']}")
     print(f"✅ Passed: {summary['passed']} ({summary['passed']/summary['total_samples']*100:.1f}%)")
+    if summary['warned']:
+        print(f"⚠️  Warned: {summary['warned']} ({summary['warned']/summary['total_samples']*100:.1f}%)")
     print(f"❌ Failed: {summary['failed']} ({summary['failed']/summary['total_samples']*100:.1f}%)")
-    
+
     if summary['requires_review']:
         print(f"\n{'='*70}")
         print(f"⚠️  {len(summary['requires_review'])} samples require review:")
         print(f"{'='*70}")
-        
+
         for result in summary['requires_review']:
-            print(f"\n📋 Sample: {result['sample']}")
-            print(f"   Status: {result['status']}")
-            
-            if result['issues']:
+            print(f"\n📋 Sample: {result['sample_id']}")
+            print(f"   Status: {result['overall_status']}")
+
+            error_issues = [i for i in result['issues'] if i['severity'] == 'error']
+            warning_issues = [i for i in result['issues'] if i['severity'] == 'warning']
+
+            if error_issues:
                 print(f"   🔴 Critical issues:")
-                for issue in result['issues']:
-                    print(f"      • {issue}")
-            
-            if result['warnings']:
+                for issue in error_issues:
+                    print(f"      • {issue['message']}")
+
+            if warning_issues:
                 print(f"   ⚠️  Warnings:")
-                for warning in result['warnings']:
-                    print(f"      • {warning}")
+                for warning in warning_issues:
+                    print(f"      • {warning['message']}")
     else:
         print(f"\n✅ All samples passed QC! No review needed.")
     
@@ -322,7 +368,7 @@ Examples:
     
     summary = analyze_all_samples(args.fastqc_dir, args.output_json, args.verbose)
     
-    # Exit with non-zero code if any samples failed
+    # Exit with non-zero code if any samples failed (WARN does not fail the pipeline)
     if summary and summary['failed'] > 0:
         sys.exit(1)
     else:
