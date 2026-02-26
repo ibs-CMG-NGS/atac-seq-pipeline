@@ -114,7 +114,7 @@ nextflow run nf-core/atacseq --input samplesheet.csv --outdir <OUTDIR> --genome 
 
 ### 4. Reference Genome Setup
 
-See **[REFERENCE_GENOME_GUIDE.md](REFERENCE_GENOME_GUIDE.md)** for detailed instructions on:
+See **[REFERENCE_GENOME_GUIDE.md](docs/REFERENCE_GENOME_GUIDE.md)** for detailed instructions on:
 - Using iGenomes (recommended for standard genomes)
 - Preparing custom reference genomes
 - Downloading and building genome indices

@@ -327,6 +327,73 @@ tail -f pipeline.log
 
 ---
 
+## 🔗 GitHub 저장소 연결
+
+### 저장소 생성
+
+1. https://github.com 에서 `+` → `New repository`
+2. 저장소 정보 입력:
+   - **Repository name:** `atac-seq-pipeline`
+   - **Visibility:** Private 또는 Public
+   - ⚠️ "Initialize this repository with a README" **체크 해제** (이미 있음)
+   - ⚠️ `.gitignore` / `license` 추가 **하지 않음** (이미 있음)
+3. `Create repository` 클릭 후 표시되는 명령어 실행:
+
+```bash
+cd /home/ygkim/ngs_pipeline/atac-seq-pipeline
+git remote add origin https://github.com/YOUR_USERNAME/atac-seq-pipeline.git
+git push -u origin main
+```
+
+### 인증 설정
+
+**방법 A: Personal Access Token (권장)**
+
+1. GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. `Generate new token` → `repo` 권한 체크 → 토큰 복사
+3. `git push` 시 비밀번호 대신 토큰 입력
+
+**방법 B: SSH Key**
+
+```bash
+# SSH 키 생성
+ssh-keygen -t ed25519 -C "your_email@example.com"
+
+# 공개키 확인 후 GitHub Settings → SSH and GPG keys에 등록
+cat ~/.ssh/id_ed25519.pub
+
+# 원격 URL을 SSH로 변경
+git remote set-url origin git@github.com:YOUR_USERNAME/atac-seq-pipeline.git
+```
+
+### Git 추적 파일 확인
+
+```bash
+# 추적되는 파일 확인 (템플릿만 나와야 정상)
+git ls-files | grep -E "(samplesheet|params)"
+# 기대 출력:
+# samplesheet_template.csv
+# params_template.yaml
+
+# .gitignore 적용 확인 (작업 파일이 ignored로 표시되어야 정상)
+git status --ignored | grep -E "(samplesheet|params)"
+```
+
+### Git 명령어 빠른 참고
+
+```bash
+git status                    # 현재 상태
+git diff                      # 변경사항 확인
+git log --oneline             # 커밋 이력
+git branch -a                 # 브랜치 목록
+git remote -v                 # 원격 저장소 확인
+git restore filename          # 변경사항 취소 (unstaged)
+git restore --staged filename # 변경사항 취소 (staged)
+git pull origin main --rebase # 원격 변경사항 가져오기 (충돌 최소화)
+```
+
+---
+
 ## 📊 결과 확인
 
 ### 주요 결과 파일
@@ -436,6 +503,126 @@ nextflow run . -profile docker -params-file params.yaml -resume
 mito_name: 'MT'  # 또는 'chrM', 'M'
 ```
 
+### 문제 6: samplesheet.csv를 실수로 Git에 커밋했을 때
+
+```bash
+# Git 추적에서 제거 (파일은 로컬에 유지)
+git rm --cached samplesheet.csv
+git commit -m "Remove samplesheet.csv from tracking"
+git push origin main
+```
+
+### 문제 7: Push가 거부됨 (rejected)
+
+```bash
+# 원격 변경사항을 먼저 가져온 후 재시도
+git pull origin main --rebase
+git push origin main
+```
+
+### 문제 8: Merge conflict 발생
+
+```bash
+# 충돌 파일 확인
+git status
+
+# 충돌 파일을 편집하여 해결 후
+git add <conflicted-file>
+git commit -m "Resolve merge conflict"
+git push origin main
+```
+
+---
+
+## 🔍 설정 검증
+
+### check_setup.sh 실행
+
+```bash
+./check_setup.sh
+```
+
+정상 출력 예시:
+```
+==========================================
+ATAC-seq Pipeline Setup Checker
+==========================================
+
+1. Checking Nextflow...
+   ✅ Nextflow found
+
+2. Checking container systems...
+   ✅ Singularity found: apptainer version 1.4.5
+
+3. Checking template files...
+   ✅ samplesheet_template.csv exists
+   ✅ params_template.yaml exists
+
+4. Checking .gitignore configuration...
+   ✅ samplesheet.csv is gitignored
+   ✅ params.yaml is gitignored
+   ✅ samplesheet_template.csv is tracked
+
+5. Checking Git repository...
+   ✅ samplesheet_template.csv is tracked by Git
+   ✅ params_template.yaml is tracked by Git
+   ✅ samplesheet.csv is not tracked (correct)
+
+6. Checking working files...
+   ✅ samplesheet.csv exists (working file)
+   ✅ params.yaml exists (working file)
+==========================================
+```
+
+### 파일 유효성 확인
+
+```bash
+# Samplesheet 형식 검증
+python bin/check_samplesheet.py samplesheet.csv
+
+# Params YAML 문법 확인
+python -c "import yaml; yaml.safe_load(open('params.yaml'))"
+
+# Nextflow dry-run (파이프라인 문법 확인)
+nextflow run . --help
+```
+
+---
+
+## ❓ FAQ
+
+**Q: Nextflow가 없을 때 직접 설치하려면?**
+```bash
+# Conda 없이 직접 설치
+curl -s https://get.nextflow.io | bash
+sudo mv nextflow /usr/local/bin/
+nextflow -version
+```
+
+**Q: 템플릿을 수정한 후 커밋하는 방법은?**
+```bash
+# 작업 파일(samplesheet.csv, params.yaml)은 자동으로 제외됨
+# 템플릿만 선택적으로 커밋
+git add samplesheet_template.csv
+git commit -m "Update samplesheet template with new examples"
+git push origin main
+```
+
+**Q: 여러 사람이 같은 저장소를 사용할 때 작업 파일 충돌을 피하려면?**
+```bash
+# 각자 프로젝트명을 붙인 파일 사용 — .gitignore가 자동 제외
+cp samplesheet_template.csv samplesheet_personA.csv  # git 무시됨
+cp samplesheet_template.csv samplesheet_personB.csv  # git 무시됨
+```
+
+**Q: Nextflow 실행 중 디스크 공간 확보가 필요할 때?**
+```bash
+# work/ 디렉토리 정리 (완료된 실행의 캐시 삭제)
+nextflow clean -f
+# 또는 특정 실행만
+nextflow clean <run-name> -f
+```
+
 ---
 
 ## 💡 유용한 팁
@@ -483,9 +670,11 @@ nextflow run . -params-file params.yaml --aligner bowtie2 --outdir results_bowti
 
 ## 📚 추가 리소스
 
-- **상세 문서:** [docs/usage.md](docs/usage.md)
+- **상세 사용법:** [usage.md](usage.md)
 - **참조 유전체 가이드:** [REFERENCE_GENOME_GUIDE.md](REFERENCE_GENOME_GUIDE.md)
-- **파이프라인 출력 설명:** [docs/output.md](docs/output.md)
+- **파이프라인 출력 설명:** [output.md](output.md)
+- **Conda 환경 관리:** [CONDA_SETUP_GUIDE.md](CONDA_SETUP_GUIDE.md)
+- **서버 설정:** [SERVER_SETUP.md](SERVER_SETUP.md)
 - **nf-core 공식 문서:** https://nf-co.re/atacseq
 - **Nextflow 문서:** https://www.nextflow.io/docs/latest/
 

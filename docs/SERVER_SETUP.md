@@ -1,5 +1,8 @@
 # 🖥️ 서버 환경 설정 가이드
 
+> **이 문서의 범위:** Linux 서버 인프라 설정 — 시스템 요구사항, Apptainer/Singularity 설치, 서버별 파이프라인 설정, 실행 검증.
+> Conda 환경 생성·관리 방법은 [CONDA_SETUP_GUIDE.md](CONDA_SETUP_GUIDE.md)를 참조하세요.
+
 이 문서는 Linux 서버에서 ATAC-seq 파이프라인을 실행하기 위한 환경 설정 방법을 설명합니다.
 
 ## 📋 목차
