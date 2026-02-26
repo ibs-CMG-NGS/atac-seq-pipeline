@@ -7,7 +7,11 @@ testing/
 testing*
 *.pyc
 
-# Samplesheet files (ignore copies, but track template)
+# Master sample metadata files (project-specific, ignore all but template)
+samples_*.csv
+!samples_template.csv
+
+# Samplesheet files (pipeline input, ignore copies but track template)
 samplesheet.csv
 samplesheet_*.csv
 !samplesheet_template.csv
