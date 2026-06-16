@@ -15,12 +15,37 @@ workflow INPUT_CHECK {
     SAMPLESHEET_CHECK ( samplesheet )
         .csv
         .splitCsv ( header:true, sep:',' )
+        .branch { row ->
+            bam:   row.containsKey('bam') && row.bam != ''
+            fastq: true
+        }
+        .set { ch_rows }
+
+    ch_rows.fastq
         .map { create_fastq_channel(it, seq_center) }
         .set { reads }
 
+    ch_rows.bam
+        .map { create_bam_channel(it) }
+        .set { bam_input }
+
     emit:
-    reads                                     // channel: [ val(meta), [ reads ] ]
+    reads                                     // channel: [ val(meta), [ reads ] ]   (empty in BAM mode)
+    bam_input                                 // channel: [ val(meta), [ bam ] ]      (empty in FASTQ mode)
     versions = SAMPLESHEET_CHECK.out.versions // channel: [ versions.yml ]
+}
+
+// Function to get list of [ meta, [ bam ] ] for pre-aligned BAM input
+def create_bam_channel(LinkedHashMap row) {
+    def meta = [:]
+    meta.id         = row.sample
+    meta.single_end = false  // ATAC-seq is always paired-end
+    meta.control    = row.containsKey('control') ? row.control : ''
+
+    if (!file(row.bam).exists()) {
+        exit 1, "ERROR: Please check input samplesheet -> BAM file does not exist!\n${row.bam}"
+    }
+    return [ meta, [ file(row.bam) ] ]
 }
 
 // Function to get list of [ meta, [ fastq_1, fastq_2 ] ]

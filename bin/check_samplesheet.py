@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import errno
 import os
 import sys
 import argparse
@@ -35,18 +36,102 @@ def print_error(error, context="Line", context_str=""):
     sys.exit(1)
 
 
+def check_samplesheet_bam(file_in, file_out, with_control=False):
+    """
+    BAM input mode: sample,bam,replicate[,control,control_replicate]
+    Outputs: sample,bam,replicate,single_end,control
+    Paired-end assumed for all BAM inputs (ATAC-seq standard).
+    """
+    if with_control:
+        HEADER = ["sample", "bam", "replicate", "control", "control_replicate"]
+    else:
+        HEADER = ["sample", "bam", "replicate"]
+
+    sample_mapping_dict = {}
+    with open(file_in, "r", encoding="utf-8-sig") as fin:
+        header = [x.strip('"') for x in fin.readline().strip().split(",")]
+        if header[: len(HEADER)] != HEADER:
+            print(f"ERROR: Please check samplesheet header -> {','.join(header)} != {','.join(HEADER)}")
+            sys.exit(1)
+
+        for line in fin:
+            if not line.strip():
+                continue
+            lspl = [x.strip().strip('"') for x in line.strip().split(",")]
+            if len(lspl) < len(HEADER):
+                print_error("Invalid number of columns (minimum = {})!".format(len(HEADER)), "Line", line)
+
+            sample  = lspl[0]
+            bam     = lspl[1]
+            replicate = lspl[2]
+            control = lspl[3] if with_control and len(lspl) > 3 else ""
+            control_replicate = lspl[4] if with_control and len(lspl) > 4 else ""
+
+            if sample.find(" ") != -1:
+                print(f"WARNING: Spaces replaced by underscores for sample: {sample}")
+                sample = sample.replace(" ", "_")
+            if not sample:
+                print_error("Sample entry has not been specified!", "Line", line)
+            if not bam or not bam.endswith(".bam"):
+                print_error("BAM file must have extension '.bam'!", "Line", line)
+            if bam.find(" ") != -1:
+                print_error("BAM file path contains spaces!", "Line", line)
+            if not replicate.isdecimal():
+                print_error("Replicate id not an integer!", "Line", line)
+
+            if with_control and control:
+                control = control.replace(" ", "_")
+                if not control_replicate.isdecimal():
+                    print_error("Control replicate id not an integer!", "Line", line)
+                control = "{}_REP{}".format(control, control_replicate)
+
+            replicate = int(replicate)
+            sample_info = [bam, replicate, "0", control]  # single_end=0 (paired-end)
+
+            if sample not in sample_mapping_dict:
+                sample_mapping_dict[sample] = {}
+            if replicate not in sample_mapping_dict[sample]:
+                sample_mapping_dict[sample][replicate] = [sample_info]
+            else:
+                if sample_info in sample_mapping_dict[sample][replicate]:
+                    print_error("Samplesheet contains duplicate rows!", "Line", line)
+                else:
+                    sample_mapping_dict[sample][replicate].append(sample_info)
+
+    if not sample_mapping_dict:
+        print_error("No entries to process!", "Samplesheet: {}".format(file_in))
+
+    out_dir = os.path.dirname(file_out)
+    make_dir(out_dir)
+    with open(file_out, "w") as fout:
+        fout.write("sample,bam,replicate,single_end,control\n")
+        for sample in sorted(sample_mapping_dict.keys()):
+            uniq_rep_ids = sorted(list(set(sample_mapping_dict[sample].keys())))
+            if len(uniq_rep_ids) != max(uniq_rep_ids) or 1 != min(uniq_rep_ids):
+                print_error(
+                    "Replicate ids must start with 1..<num_replicates>!",
+                    "Sample",
+                    "{}, replicate ids: {}".format(sample, ",".join([str(x) for x in uniq_rep_ids])),
+                )
+            for replicate in sorted(sample_mapping_dict[sample].keys()):
+                for idx, val in enumerate(sample_mapping_dict[sample][replicate]):
+                    bam, rep, single_end, control = val[0], val[1], val[2], val[3]
+                    sample_id = "{}_REP{}_T{}".format(sample, replicate, idx + 1)
+                    fout.write(",".join([sample_id, bam, str(rep), single_end, control]) + "\n")
+
+
 def check_samplesheet(file_in, file_out, with_control=False):
     """
-    This function checks that the samplesheet follows the following structure:
-    sample,fastq_1,fastq_2,replicate
-    OSMOTIC_STRESS_T0,s3://nf-core-awsmegatests/atacseq/input_data/minimal/GSE66386/SRR1822153_1.fastq.gz,s3://nf-core-awsmegatests/atacseq/input_data/minimal/GSE66386/SRR1822153_2.fastq.gz,1
-    OSMOTIC_STRESS_T0,s3://nf-core-awsmegatests/atacseq/input_data/minimal/GSE66386/SRR1822154_1.fastq.gz,s3://nf-core-awsmegatests/atacseq/input_data/minimal/GSE66386/SRR1822154_2.fastq.gz,2
-    OSMOTIC_STRESS_T15,s3://nf-core-awsmegatests/atacseq/input_data/minimal/GSE66386/SRR1822157_1.fastq.gz,s3://nf-core-awsmegatests/atacseq/input_data/minimal/GSE66386/SRR1822157_2.fastq.gz,1
-    OSMOTIC_STRESS_T15,s3://nf-core-awsmegatests/atacseq/input_data/minimal/GSE66386/SRR1822158_1.fastq.gz,s3://nf-core-awsmegatests/atacseq/input_data/minimal/GSE66386/SRR1822158_2.fastq.gz,1
-
-    For an example see:
-    https://raw.githubusercontent.com/nf-core/test-datasets/atacseq/samplesheet/v2.1/samplesheet_test.csv
+    Auto-detects input mode from header:
+      BAM mode:  sample,bam,replicate[,control,control_replicate]
+      FASTQ mode: sample,fastq_1,fastq_2,replicate[,control,control_replicate]
     """
+    with open(file_in, "r", encoding="utf-8-sig") as fin:
+        header = [x.strip('"') for x in fin.readline().strip().split(",")]
+
+    if "bam" in header:
+        check_samplesheet_bam(file_in, file_out, with_control)
+        return
 
     sample_mapping_dict = {}
     with open(file_in, "r", encoding="utf-8-sig") as fin:

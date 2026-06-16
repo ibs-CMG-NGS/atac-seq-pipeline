@@ -114,6 +114,7 @@ include { FASTQ_ALIGN_CHROMAP              } from '../subworkflows/nf-core/fastq
 
 include { BAM_MARKDUPLICATES_PICARD as MERGED_LIBRARY_MARKDUPLICATES_PICARD   } from '../subworkflows/nf-core/bam_markduplicates_picard/main'
 include { BAM_MARKDUPLICATES_PICARD as MERGED_REPLICATE_MARKDUPLICATES_PICARD } from '../subworkflows/nf-core/bam_markduplicates_picard/main'
+include { SAMTOOLS_INDEX as SAMTOOLS_INDEX_BAM_INPUT                           } from '../modules/nf-core/samtools/index/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -150,11 +151,27 @@ workflow ATACSEQ {
     // ! There is currently no tooling to help you write a sample sheet schema
 
     //
-    // SUBWORKFLOW: Read QC and trim adapters
+    // BAM input path: index pre-aligned BAMs and feed directly to filter step
+    // (skips trimming, alignment, and MarkDuplicates)
+    //
+    ch_bam_input_renamed = Channel.empty()
+    if (params.aligner == 'bam') {
+        ch_bam_input_renamed = INPUT_CHECK.out.bam_input
+            .map { meta, bams ->
+                def meta_clone = meta.clone()
+                meta_clone.id = meta_clone.id - ~/_T\d+$/
+                [ meta_clone, bams[0] ]
+            }
+        SAMTOOLS_INDEX_BAM_INPUT ( ch_bam_input_renamed )
+        ch_versions = ch_versions.mix(SAMTOOLS_INDEX_BAM_INPUT.out.versions.first())
+    }
+
+    //
+    // SUBWORKFLOW: Read QC and trim adapters (FASTQ mode only)
     //
     FASTQ_FASTQC_UMITOOLS_TRIMGALORE (
         INPUT_CHECK.out.reads,
-        params.skip_fastqc || params.skip_qc,
+        params.skip_fastqc || params.skip_qc || params.aligner == 'bam',
         false,
         false,
         params.skip_trimming,
@@ -166,7 +183,7 @@ workflow ATACSEQ {
     //
     // MODULE: ATAC-seq specific QC summary
     //
-    if (!params.skip_qc && !params.skip_fastqc) {
+    if (!params.skip_qc && !params.skip_fastqc && params.aligner != 'bam') {
         ATAC_QC_SUMMARY (
             FASTQ_FASTQC_UMITOOLS_TRIMGALORE.out.fastqc_zip.collect{it[1]}.ifEmpty([])
         )
@@ -268,7 +285,7 @@ workflow ATACSEQ {
         ch_versions = ch_versions.mix(ALIGN_STAR.out.versions)
     }
 
-    // Create channels: [ meta, [bam] ]
+    // Create channels: [ meta, [bam] ]  (FASTQ mode only)
     ch_genome_bam
         .map {
             meta, bam ->
@@ -285,7 +302,7 @@ workflow ATACSEQ {
         .set { ch_sort_bam }
 
     //
-    // MODULE: Merge resequenced BAM files
+    // MODULE: Merge resequenced BAM files (FASTQ mode only)
     //
     PICARD_MERGESAMFILES_LIBRARY (
         ch_sort_bam
@@ -293,7 +310,7 @@ workflow ATACSEQ {
     ch_versions = ch_versions.mix(PICARD_MERGESAMFILES_LIBRARY.out.versions.first())
 
     //
-    // SUBWORKFLOW: Mark duplicates in BAM files
+    // SUBWORKFLOW: Mark duplicates in BAM files (FASTQ mode only)
     //
     MERGED_LIBRARY_MARKDUPLICATES_PICARD (
         PICARD_MERGESAMFILES_LIBRARY.out.bam,
@@ -310,11 +327,21 @@ workflow ATACSEQ {
     )
     ch_versions = ch_versions.mix(MERGED_LIBRARY_MARKDUPLICATES_PICARD.out.versions)
 
+    // Unified BAM+BAI channel for filter step:
+    //   FASTQ mode → MarkDuplicates output (duplicates marked, not removed)
+    //   BAM mode   → indexed input BAMs    (duplicates already marked by upstream tool)
+    ch_markdup_bam_bai = MERGED_LIBRARY_MARKDUPLICATES_PICARD.out.bam
+        .join(MERGED_LIBRARY_MARKDUPLICATES_PICARD.out.bai, by: [0])
+        .mix(
+            ch_bam_input_renamed
+                .join(SAMTOOLS_INDEX_BAM_INPUT.out.bai, by: [0])
+        )
+
     //
     // SUBWORKFLOW: Filter BAM file
     //
     MERGED_LIBRARY_FILTER_BAM (
-        MERGED_LIBRARY_MARKDUPLICATES_PICARD.out.bam.join(MERGED_LIBRARY_MARKDUPLICATES_PICARD.out.bai, by: [0]),
+        ch_markdup_bam_bai,
         PREPARE_GENOME.out.filtered_bed.first(),
         PREPARE_GENOME
             .out
@@ -331,7 +358,7 @@ workflow ATACSEQ {
     // MODULE: Preseq coverage analysis
     //
     ch_preseq_multiqc = Channel.empty()
-    if (!params.skip_preseq) {
+    if (!params.skip_preseq && params.aligner != 'bam') {
         MERGED_LIBRARY_PRESEQ_LCEXTRAP (
             MERGED_LIBRARY_MARKDUPLICATES_PICARD.out.bam
         )
@@ -490,10 +517,8 @@ workflow ATACSEQ {
     }
 
     // Create channels: [ meta, bam, bai, peak_file ]
-    MERGED_LIBRARY_MARKDUPLICATES_PICARD
-        .out
-        .bam
-        .join(MERGED_LIBRARY_MARKDUPLICATES_PICARD.out.bai, by: [0])
+    // Uses ch_markdup_bam_bai (works for both FASTQ and BAM input modes)
+    ch_markdup_bam_bai
         .join(MERGED_LIBRARY_CALL_ANNOTATE_PEAKS.out.peaks, by: [0])
         .set { ch_bam_peaks }
 
