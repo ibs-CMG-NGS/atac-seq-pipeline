@@ -270,9 +270,9 @@
                 "aligner": {
                     "type": "string",
                     "default": "bwa",
-                    "description": "Specifies the alignment algorithm to use - available options are 'bwa', 'bowtie2', 'chromap' and 'star'.",
+                    "description": "Specifies the alignment algorithm to use - available options are 'bwa', 'bowtie2', 'chromap', 'star' and 'bam' (pre-aligned BAM input).",
                     "fa_icon": "fas fa-map-signs",
-                    "enum": ["bwa", "bowtie2", "chromap", "star"]
+                    "enum": ["bwa", "bowtie2", "chromap", "star", "bam"]
                 },
                 "keep_dups": {
                     "type": "boolean",

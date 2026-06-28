@@ -330,12 +330,14 @@ workflow ATACSEQ {
     // Unified BAM+BAI channel for filter step:
     //   FASTQ mode → MarkDuplicates output (duplicates marked, not removed)
     //   BAM mode   → indexed input BAMs    (duplicates already marked by upstream tool)
-    ch_markdup_bam_bai = MERGED_LIBRARY_MARKDUPLICATES_PICARD.out.bam
-        .join(MERGED_LIBRARY_MARKDUPLICATES_PICARD.out.bai, by: [0])
-        .mix(
-            ch_bam_input_renamed
-                .join(SAMTOOLS_INDEX_BAM_INPUT.out.bai, by: [0])
-        )
+    ch_markdup_bam_bai = Channel.empty()
+    if (params.aligner == 'bam') {
+        ch_markdup_bam_bai = ch_bam_input_renamed
+            .join(SAMTOOLS_INDEX_BAM_INPUT.out.bai, by: [0])
+    } else {
+        ch_markdup_bam_bai = MERGED_LIBRARY_MARKDUPLICATES_PICARD.out.bam
+            .join(MERGED_LIBRARY_MARKDUPLICATES_PICARD.out.bai, by: [0])
+    }
 
     //
     // SUBWORKFLOW: Filter BAM file

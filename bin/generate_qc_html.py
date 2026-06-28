@@ -17,9 +17,28 @@ def generate_html_report(json_file, html_output):
     
     # Calculate statistics
     total = data['total_samples']
-    passed = data['passed']
-    failed = data['failed']
+    passed = data.get('passed', 0)
+    failed = data.get('failed', 0)
+    warned = data.get('warned', 0)
     pass_rate = (passed / total * 100) if total > 0 else 0
+    
+    # Convert new format to old format for compatibility
+    all_results = []
+    for sample in data.get('requires_review', []):
+        result = {
+            'sample': sample.get('sample_id', 'Unknown'),
+            'status': sample.get('overall_status', 'UNKNOWN'),
+            'basic_stats': {
+                'Total Sequences': sample.get('sequencing', {}).get('total_reads', 'N/A'),
+                '%GC': sample.get('sequencing', {}).get('gc_content', 'N/A')
+            },
+            'issues': [issue['message'] for issue in sample.get('issues', []) if issue.get('severity') == 'error'],
+            'warnings': [issue['message'] for issue in sample.get('issues', []) if issue.get('severity') == 'warning']
+        }
+        all_results.append(result)
+    
+    # Add to data for later use
+    data['all_results'] = all_results
     
     # Start HTML
     html = f"""<!DOCTYPE html>
@@ -235,18 +254,19 @@ def generate_html_report(json_file, html_output):
             <tbody>
 """
         
-        for result in data['requires_review']:
-            status_class = 'status-pass' if result['status'] == 'PASS' else 'status-fail'
+        for result in all_results:
+            status = result.get('status', 'UNKNOWN')
+            status_class = 'status-pass' if status == 'PASS' else 'status-fail'
             total_reads = result.get('basic_stats', {}).get('Total Sequences', 'N/A')
             
             issues_html = '<ul class="issue-list">'
             
             if result.get('issues'):
-                for issue in result['issues']:
+                for issue in result.get('issues'):
                     issues_html += f'<li class="issue">🔴 {issue}</li>'
             
             if result.get('warnings'):
-                for warning in result['warnings']:
+                for warning in result.get('warnings'):
                     issues_html += f'<li class="warning">⚠️ {warning}</li>'
             
             issues_html += '</ul>'
@@ -254,7 +274,7 @@ def generate_html_report(json_file, html_output):
             html += f"""
                 <tr>
                     <td><strong>{result['sample']}</strong></td>
-                    <td><span class="status-badge {status_class}">{result['status']}</span></td>
+                    <td><span class="status-badge {status_class}">{status}</span></td>
                     <td>{total_reads}</td>
                     <td>{issues_html}</td>
                 </tr>
@@ -288,8 +308,9 @@ def generate_html_report(json_file, html_output):
             <tbody>
 """
     
-    for result in sorted(data['all_results'], key=lambda x: (x['status'] != 'PASS', x['sample'])):
-        status_class = 'status-pass' if result['status'] == 'PASS' else 'status-fail'
+    for result in sorted(data['all_results'], key=lambda x: (x.get('status', 'UNKNOWN') != 'PASS', x.get('sample', ''))):
+        status = result.get('status', 'UNKNOWN')
+        status_class = 'status-pass' if status == 'PASS' else 'status-fail'
         total_reads = result.get('basic_stats', {}).get('Total Sequences', 'N/A')
         gc_content = result.get('basic_stats', {}).get('%GC', 'N/A')
         issue_count = len(result.get('issues', []))
@@ -304,7 +325,7 @@ def generate_html_report(json_file, html_output):
         html += f"""
                 <tr>
                     <td>{result['sample']}</td>
-                    <td><span class="status-badge {status_class}">{result['status']}</span></td>
+                    <td><span class="status-badge {status_class}">{status}</span></td>
                     <td>{total_reads}</td>
                     <td>{gc_content}</td>
                     <td>{issues_text}</td>

@@ -1,6 +1,9 @@
 # Input/Output Configuration
-input: './samplesheet.csv'
-outdir: './results'
+# 경로 규칙: /media/ngs/MainStorage/ygkim/{year}/
+# raw 데이터:  /media/ngs/MainStorage/ygkim/{year}/00_RAWDATA/{year}-{month}-{project-name}-raw/
+# 결과물:      /media/ngs/MainStorage/ygkim/{year}/01_RESULTS/{year}-{month}-{project-name}-results/results/
+input: '/home/ngs/ngs-pipeline/atac-seq-pipeline/samplesheet.csv'
+outdir: '/media/ngs/MainStorage/ygkim/YYYY/01_RESULTS/YYYY-MM-project-name-results/results'
 
 # Reference Genome
 # Option 1: Use iGenomes (recommended for standard genomes)
@@ -69,7 +72,10 @@ max_time: '240.h'
 
 # Output options
 publish_dir_mode: 'copy'  # Options: copy, symlink, link
-save_reference: true      # Save generated genome indices (권장: 재사용 가능)
+save_reference: false     # 레퍼런스 인덱스는 공용 경로(/home/ngs/data/reference/)에 별도 보관 권장
+                          # 이미 빌드된 인덱스 재사용: bwa_index, fasta 등 아래 항목에 절대경로 지정
+# bwa_index: '/home/ngs/data/reference/{genome}/bwa/'
+# fasta:     '/home/ngs/data/reference/{genome}/genome.fa'
 save_align_intermeds: false  # Save intermediate BAM files
 save_unaligned: false     # Save unmapped reads
 

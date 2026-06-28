@@ -8,32 +8,89 @@
 
 ## 🚀 빠른 시작
 
-### 1단계: 샘플시트 준비
+### 1단계: 샘플시트 준비 — `make_samplesheet.py` 사용 (권장)
+
+> ⚠️ 샘플시트를 수동으로 작성하면 `replicate` 규칙 위반, 파일 경로 실수 등의 오류가 발생하기 쉽습니다.  
+> **`bin/make_samplesheet.py`를 사용하면 자동 생성 + 실행 전 검증까지 한 번에 처리됩니다.**
+
+#### 메타데이터 TSV 작성 (사람이 직접 하는 유일한 작업)
+
+```tsv
+sample_id       condition    replicate   folder
+Veh_1           Veh          1           Neuron1
+Veh_2           Veh          1           Neuron2
+Veh_3           Veh          1           Neuron3
+GABA_1          GABA         1           Neuron4
+GABA_2          GABA         1           Neuron5
+GABA_3          GABA         1           Neuron6
+```
+
+**컬럼 설명:**
+
+| 컬럼 | 필수 | 설명 |
+|------|------|------|
+| `sample_id` | ✅ | 파이프라인 sample 이름 (결과 파일명에 사용) |
+| `replicate` | ✅ | **같은 `sample_id` 내**에서 1부터 시작하는 정수. 독립적인 샘플은 항상 `1` |
+| `condition` | - | 그룹 정보 (메모용, 파이프라인 미사용) |
+| `folder` | - | raw_dir 아래 실제 폴더명 (생략 시 sample_id와 동일) |
+
+#### ⚠️ `replicate` 규칙 (중요)
+
+```
+❌ 잘못된 예 — sample이 다르면 replicate도 달라지면 안 됨
+   Veh_1, replicate=1
+   Veh_2, replicate=2   ← ERROR: 'Veh_2'는 독립 샘플이므로 반드시 1부터
+
+✅ 올바른 예 — 독립적인 샘플은 각각 replicate=1
+   Veh_1, replicate=1
+   Veh_2, replicate=1
+   Veh_3, replicate=1
+
+✅ 올바른 예 — 같은 sample_id로 생물학적 반복 표현 시
+   KO, replicate=1
+   KO, replicate=2
+   KO, replicate=3
+```
+
+> 파이프라인이 동일한 `sample_id`의 여러 lane/run을 같은 replicate로 자동 merge합니다.  
+> 각 샘플이 이미 독립 개체이면 `sample_id`를 다르게 지정하고 `replicate=1`을 사용하세요.
+
+#### 샘플시트 자동 생성 + 검증
 
 ```bash
-# 템플릿 복사
-cp samplesheet_template.csv samplesheet.csv
-
-# 편집기로 열기
-nano samplesheet.csv
-# 또는
-vim samplesheet.csv
+python3 bin/make_samplesheet.py \
+    metadata_xxx.tsv \
+    /path/to/01.RawData \
+    samplesheet_xxx.csv \
+    --validate
 ```
 
-**예시 내용:**
+`--validate` 옵션이 파이프라인의 `check_samplesheet.py`를 실행하여 실제 파이프라인과 동일한 규칙으로 검증합니다.
+
+**출력 예시:**
+```
+────────────────────────────────────────────────────
+  Sample               Folder    Rep  Lanes
+────────────────────────────────────────────────────
+  Veh_1                Neuron1     1  L5, L6, L7, L8
+  Veh_2                Neuron2     1  L5, L6, L7, L8
+  GABA_1               Neuron4     1  L5, L6, L7, L8
+  ...
+────────────────────────────────────────────────────
+  총 12개 샘플, 48개 행
+
+✅ 샘플시트 저장: samplesheet_xxx.csv
+✅ Pipeline 검증 통과 (check_samplesheet.py)
+```
+
+#### 수동 작성 시 형식 (make_samplesheet.py 미사용 시)
+
 ```csv
 sample,fastq_1,fastq_2,replicate
-WT,/data/fastq/WT_rep1_R1.fastq.gz,/data/fastq/WT_rep1_R2.fastq.gz,1
-WT,/data/fastq/WT_rep2_R1.fastq.gz,/data/fastq/WT_rep2_R2.fastq.gz,2
-KO,/data/fastq/KO_rep1_R1.fastq.gz,/data/fastq/KO_rep1_R2.fastq.gz,1
-KO,/data/fastq/KO_rep2_R1.fastq.gz,/data/fastq/KO_rep2_R2.fastq.gz,2
+Veh_1,/data/Neuron1_L5_1.fq.gz,/data/Neuron1_L5_2.fq.gz,1
+Veh_1,/data/Neuron1_L6_1.fq.gz,/data/Neuron1_L6_2.fq.gz,1
+Veh_2,/data/Neuron2_L5_1.fq.gz,/data/Neuron2_L5_2.fq.gz,1
 ```
-
-**주의사항:**
-- 절대 경로 또는 상대 경로 사용
-- FASTQ 파일은 반드시 gzip 압축 (`.fastq.gz` 또는 `.fq.gz`)
-- Replicate 번호는 1부터 시작
-- Single-end 데이터는 `fastq_2` 컬럼을 비워둠
 
 ### 2단계: 파라미터 파일 설정
 
@@ -123,22 +180,50 @@ nextflow run . \
 
 ### 5단계: 프로덕션 실행 (서버)
 
-```bash
-# 서버에서 실행
-nextflow run /path/to/atac-seq-pipeline \
-  -profile singularity \
-  -params-file params.yaml \
-  -resume
+**`run_pipeline.sh` 래퍼 사용 (권장) — 자동 resume + 무결성 검사 포함:**
 
-# 백그라운드 실행
-nohup nextflow run /path/to/atac-seq-pipeline \
-  -profile singularity \
-  -params-file params.yaml \
-  -resume > pipeline.log 2>&1 &
+```bash
+cd /home/ngs/ngs-pipeline/atac-seq-pipeline
+
+bash run_pipeline.sh \
+    --params params_pym.yaml \
+    --outdir /home/ngs/data/ygkim/2026/2026-pym-mouse-atac/results \
+    --workdir /home/ngs/data/nextflow_work/atac-seq-pipeline-pym \
+    --max-resume 2
+```
+
+> `run_pipeline.sh`는 파이프라인 종료 후 자동으로 출력 무결성을 검사하고,  
+> 누락된 샘플이 있으면 `-resume`으로 자동 재실행합니다 (경합 조건 방지).
+
+**screen으로 백그라운드 실행 (직접 nextflow 사용 시):**
+
+```bash
+# screen 세션 생성
+screen -dmS {project}-atac bash -c "
+source /home/ngs/program/anaconda3/etc/profile.d/conda.sh
+conda activate atac-seq-pipeline
+cd /home/ngs/ngs-pipeline/atac-seq-pipeline
+nextflow run main.nf \
+    -params-file params_{project}.yaml \
+    -work-dir /home/ngs/data/nextflow_work/atac-seq-pipeline-{project} \
+    -with-trace -with-report -with-timeline \
+    > /home/ngs/data/ygkim/2026/2026-{project}/nextflow.log 2>&1
+echo \"Exit: \$?\" >> /home/ngs/data/ygkim/2026/2026-{project}/nextflow.log
+"
+
+# 세션 확인
+screen -ls
 
 # 로그 확인
-tail -f pipeline.log
+tail -f /home/ngs/data/ygkim/2026/2026-{project}/nextflow.log
+
+# screen 접속 (진행 상황 직접 확인)
+screen -r {project}-atac
+# 나오기: Ctrl+A, D
 ```
+
+> ⚠️ 새 프로젝트마다 `-work-dir`을 **반드시 분리**하세요.  
+> 같은 work dir을 공유하면 캐시 충돌이 발생합니다.
 
 ---
 
@@ -451,7 +536,62 @@ results/
 
 ## 🐛 트러블슈팅
 
-### 문제 1: "No such file or directory" 에러
+### 문제 1: "Replicate ids must start with 1..<num_replicates>!" 에러
+
+**원인:** `replicate` 컬럼 규칙 위반. 같은 `sample_id` 내에서만 1부터 연속 번호여야 함.
+
+```
+ERROR: Please check samplesheet -> Replicate ids must start with 1..<num_replicates>!
+  Sample: 'GABA_2, replicate ids: 2'
+```
+
+**해결:** `make_samplesheet.py`의 `--validate`로 실행 전에 검출 가능.
+
+```bash
+# 독립적인 샘플은 모두 replicate=1
+# ❌ 잘못됨
+Veh_2, replicate=2
+
+# ✅ 올바름
+Veh_2, replicate=1
+```
+
+자세한 규칙은 **1단계: 샘플시트 준비** 섹션의 `replicate` 규칙 참고.
+
+---
+
+### 문제 2: ATAQv/FRiP가 일부 샘플에서 누락 (경합 조건)
+
+**원인:** MACS2가 파이프라인 마지막에 완료되면 downstream ATAQv/FRiP 태스크가 Nextflow 채널에 큐잉되지 못하는 timing race condition.
+
+**예방:** `run_pipeline.sh` 래퍼 사용 (자동 `-resume` 포함).
+
+**사후 수습:**
+```bash
+# 1. 무결성 검사로 누락 샘플 확인
+python3 bin/check_pipeline_integrity.py <results_dir> <work_dir>
+
+# 2. ATAQv 수동 재실행 스크립트 사용
+bash run_ataqv_missing.sh   # 프로젝트별로 작성
+```
+
+**근본 원인과 설정 수정 (nextflow.config):**
+```groovy
+executor.cpus        = 24      // 서버 전체 CPU 사용 (기존 16 → CPU 슬롯 부족이 원인)
+executor.queueSize   = 100     // 더 많은 태스크를 동시에 큐잉
+executor.pollInterval = '5 sec' // 완료 감지 주기 단축
+```
+
+**프로세스별 CPU 최적화 (conf/base.config):**
+```groovy
+withName: '.*MACS2.*'  { cpus = 4 }  // 실제로 멀티스레드 미지원
+withName: '.*ATAQV.*'  { cpus = 4 }  // 4스레드로 충분
+withName: 'FRIP_SCORE' { cpus = 1 }  // bedtools intersect는 단일 스레드
+```
+
+---
+
+### 문제 3: "No such file or directory" 에러
 
 **원인:** samplesheet.csv의 파일 경로가 잘못됨
 
@@ -464,7 +604,7 @@ ls -lh /path/to/your/file.fastq.gz
 realpath your_file.fastq.gz
 ```
 
-### 문제 2: 메모리 부족 에러
+### 문제 4: 메모리 부족 에러
 
 **해결:** params.yaml에서 리소스 줄이기
 ```yaml
@@ -472,7 +612,7 @@ max_memory: '64.GB'
 max_cpus: 8
 ```
 
-### 문제 3: Docker/Singularity 권한 에러
+### 문제 5: Docker/Singularity 권한 에러
 
 **Docker (WSL):**
 ```bash
@@ -486,7 +626,7 @@ sudo usermod -aG docker $USER
 export NXF_SINGULARITY_CACHEDIR="/path/to/writable/cache"
 ```
 
-### 문제 4: Pipeline 중단 후 재시작
+### 문제 6: Pipeline 중단 후 재시작
 
 **해결:**
 ```bash
@@ -494,7 +634,7 @@ export NXF_SINGULARITY_CACHEDIR="/path/to/writable/cache"
 nextflow run . -profile docker -params-file params.yaml -resume
 ```
 
-### 문제 5: Chromosome 이름 불일치
+### 문제 7: Chromosome 이름 불일치
 
 **에러:** "Chromosome chrM not found"
 
@@ -504,7 +644,7 @@ nextflow run . -profile docker -params-file params.yaml -resume
 mito_name: 'MT'  # 또는 'chrM', 'M'
 ```
 
-### 문제 6: samplesheet.csv를 실수로 Git에 커밋했을 때
+### 문제 8: samplesheet.csv를 실수로 Git에 커밋했을 때
 
 ```bash
 # Git 추적에서 제거 (파일은 로컬에 유지)
@@ -513,7 +653,7 @@ git commit -m "Remove samplesheet.csv from tracking"
 git push origin main
 ```
 
-### 문제 7: Push가 거부됨 (rejected)
+### 문제 9: Push가 거부됨 (rejected)
 
 ```bash
 # 원격 변경사항을 먼저 가져온 후 재시도
@@ -521,7 +661,7 @@ git pull origin main --rebase
 git push origin main
 ```
 
-### 문제 8: Merge conflict 발생
+### 문제 10: Merge conflict 발생
 
 ```bash
 # 충돌 파일 확인
